@@ -1,4 +1,4 @@
-const TITLE = 'Connections'
+const TITLE = 'Gymkhana'
 
 interface HeaderProps {
   onReset: () => void

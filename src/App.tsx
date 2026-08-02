@@ -5,7 +5,7 @@ import Header from './components/Header'
 import RulesPanel from './components/RulesPanel'
 import StatusBar from './components/StatusBar'
 import { gameReducer, initialState } from './game/reducer'
-import { chooseMove } from './game/ai'
+import { chooseMove } from './game/lean_ai'
 import { OPPONENT } from './constants'
 
 function App() {

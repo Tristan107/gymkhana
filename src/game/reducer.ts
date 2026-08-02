@@ -14,11 +14,14 @@ export interface GameState {
   winner: Player | null
   tilesPlaced: Record<Player, number>
   alertMessage: string | null
+  gameMode: 'pvp' | 'ai'
+  humanPlayer: Player | null
 }
 
 export type GameAction =
   | { type: 'PLACE'; row: number; col: number }
   | { type: 'RESET' }
+  | { type: 'START_AI'; human: Player }
 
 export const initialState: GameState = createInitialState()
 
@@ -30,6 +33,8 @@ function createInitialState(): GameState {
     winner: null,
     tilesPlaced: { red: 0, white: 0 },
     alertMessage: null,
+    gameMode: 'pvp',
+    humanPlayer: null,
   }
 }
 
@@ -37,6 +42,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'RESET':
       return createInitialState()
+
+    case 'START_AI':
+      return {
+        ...createInitialState(),
+        gameMode: 'ai',
+        humanPlayer: action.human,
+      }
 
     case 'PLACE': {
       const { row, col } = action

@@ -1,38 +1,67 @@
-# Layout
-This is a board game played on this 11x11 board, 11 rows and 11 columns, which can be modelized like this :
+# Rules of the Game
 
-rows = [
-" R.R.R.R.R ",
-"W.W.W.W.W.W",
-".R.R.R.R.R.",
-"W.W.W.W.W.W",
-".R.R.R.R.R.",
-"W.W.W.W.W.W",
-".R.R.R.R.R.",
-"W.W.W.W.W.W",
-".R.R.R.R.R.",
-"W.W.W.W.W.W",
-" R.R.R.R.R "
-]
+## Overview & Board Layout
 
-row n°1 is the top row and col n°1 is the left column
+The game is played on an **11x11 grid** with fixed starting tokens arranged in a staggered pattern, similar to the game *Hex*.
 
-It's red player (rp) vs white player (wp), there are prepositionned tokens W belonging to wp and R belonging to rp on some squares as you can see. The '.' are the playable spots.
+- **Grid Dimensions:** 11 rows by 11 columns.
+  - **Row 1** is the top row, **Row 11** is the bottom row.
+  - **Column 1** is the leftmost column, **Column 11** is the rightmost column.
+- **Adjacency:** All adjacencies, connections, and paths are calculated **orthogonally only** (Up, Down, Left, Right).
+- **Token Reserves:** Each player starts with a limited supply of **20 playable tokens**.
 
-# Gameplay
-rp plays the first move.
+### Board Model
+```
+Row 01:   R . R . R . R . R  
+Row 02: W . W . W . W . W . W
+Row 03: . R . R . R . R . R .
+Row 04: W . W . W . W . W . W
+Row 05: . R . R . R . R . R .
+Row 06: W . W . W . W . W . W
+Row 07: . R . R . R . R . R .
+Row 08: W . W . W . W . W . W
+Row 09: . R . R . R . R . R .
+Row 10: W . W . W . W . W . W
+Row 11:   R . R . R . R . R  
+```
 
-Each player take turn placing a R for rp or a W for wp replacing a '.'
-A '.' is playable for W only if it connects 2 W (for example, row 1 col 3 is not playable for white)
-A '.' is playable for R only if it connects 2 R (for example, row 2 col 1 is not playable for red)
+### Legend
 
-# Win conditions
-The winner is the first to :
+- `R` = Fixed starting Red token (Red Player)
+- `W` = Fixed starting White token (White Player)
+- `.` = Playable empty space
 
-For rp, either :
-1. Connect a top R (first line) with a bottom R (last line) through a continuous path
-2. Box-in a chain of W of any length (having a R on all adjacents '.' of the chain)
+---
 
-For wp, either :
-1. Connect a left W (first column) with a right R (last column) through a continuous path
-2. Box-in a chain of R of any length (having a W on all adjacents '.')
+## Gameplay Mechanics
+
+- **First Move:** Red Player (RP) plays first. Players then alternate taking turns.
+- **Placement Rule:** On their turn, a player places 1 token from their reserve onto a valid empty space (`.`):
+  * **Red (`R`) Placement:** An empty space (`.`) is playable for Red **only if** it is orthogonally adjacent to **at least two `R` tokens**.
+  * **White (`W`) Placement:** An empty space (`.`) is playable for White **only if** it is orthogonally adjacent to **at least two `W` tokens**.
+
+*(Example: Row 2, Col 1 is initially invalid for Red, while Row 1, Col 3 is initially invalid for White.)*
+
+---
+
+## Win Conditions
+
+The first player to fulfill **at least one** of their win conditions immediately wins the game:
+
+### Red Player (RP) Wins by:
+
+1. **Connection:** Creating a continuous, unbroken path of orthogonally connected `R` tokens connecting the **Top Row (Row 1)** to the **Bottom Row (Row 11)**.
+2. **Surrounding ("Box-in"):** Completely surrounding a connected group of `W` tokens of any length by occupying all adjacent empty spaces (`.`) around that group with `R` tokens.
+   * *Note on Board Edges:* The board boundary acts as a virtual wall (tokens touching the edge lose that direction of movement), but the encircling player must still fully close off all remaining open adjacent spaces with their own tokens.
+
+### White Player (WP) Wins by:
+
+1. **Connection:** Creating a continuous, unbroken path of orthogonally connected `W` tokens connecting the **Leftmost Column (Col 1)** to the **Rightmost Column (Col 11)**.
+2. **Surrounding ("Box-in"):** Completely surrounding a connected group of `R` tokens of any length by occupying all adjacent empty spaces (`.`) around that group with `W` tokens.
+   * *Note on Board Edges:* The board boundary acts as a virtual wall, but the encircling player must still fully close off all remaining open adjacent spaces with their own tokens.
+
+---
+
+## End of Game & Draw Conditions
+
+- **Draw:** If both players exhaust their supply of **20 playable tokens** without any player achieving a win condition, the game ends in a **Draw**.

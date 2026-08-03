@@ -52,14 +52,14 @@ The first player to fulfill **at least one** of their win conditions immediately
 
 1. **Connection:** Creating a continuous, unbroken path of orthogonally connected `R` tokens connecting the **Top Row (Row 1)** to the **Bottom Row (Row 11)**.
 2. **Surrounding ("Box-in"):** Completely surrounding a connected group of `W` tokens of any length by occupying all adjacent empty spaces (`.`) around that group with `R` tokens.
-   * *Note on Board Edges:* The board boundary acts as a virtual wall (tokens touching the edge lose that direction of movement), but the encircling player must still fully close off all remaining open adjacent spaces with their own tokens.
 
 ### White Player (WP) Wins by:
 
 1. **Connection:** Creating a continuous, unbroken path of orthogonally connected `W` tokens connecting the **Leftmost Column (Col 1)** to the **Rightmost Column (Col 11)**.
 2. **Surrounding ("Box-in"):** Completely surrounding a connected group of `R` tokens of any length by occupying all adjacent empty spaces (`.`) around that group with `W` tokens.
-   * *Note on Board Edges:* The board boundary acts as a virtual wall, but the encircling player must still fully close off all remaining open adjacent spaces with their own tokens.
 
+### Note on Board Edges
+Empty cells on the edge are ordinary spaces — they must still be occupied with your own tokens to complete a box-in; the boundary itself does not count as a closed side.
 ---
 
 ## End of Game & Draw Conditions

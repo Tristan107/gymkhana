@@ -5,6 +5,7 @@ import {
   checkSurroundWin,
   createBoard,
   isBoardFull,
+  isCellPlayable,
 } from './logic'
 
 export interface GameState {
@@ -55,7 +56,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (
         state.gameOver ||
         state.board[row][col] !== null ||
-        state.tilesPlaced[state.currentPlayer] >= MAX_TILES
+        state.tilesPlaced[state.currentPlayer] >= MAX_TILES ||
+        !isCellPlayable(state.board, row, col, state.currentPlayer, state.gameOver)
       ) {
         return state
       }

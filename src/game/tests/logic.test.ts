@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { BOARD_SIZE } from '../../constants'
 import type { Board, CellValue } from '../../types'
 import {
   checkConnectionWin,
@@ -145,6 +146,47 @@ describe('isCellPlayable', () => {
   it('rejects everything once the game is over', () => {
     expect(isCellPlayable(createBoard(), 1, 1, 'red', true)).toBe(false)
   })
+
+  it('matches the placement examples from the rules doc', () => {
+    const board = createBoard()
+    expect(isCellPlayable(board, 1, 0, 'red', false)).toBe(false)
+    expect(isCellPlayable(board, 0, 2, 'white', false)).toBe(false)
+    expect(isCellPlayable(board, 0, 2, 'red', false)).toBe(true)
+    expect(isCellPlayable(board, 1, 1, 'white', false)).toBe(true)
+  })
+})
+
+describe('placement rule: "at least two" equals a straight line', () => {
+  it('is playable exactly when two same-color orthogonal neighbors exist', () => {
+    const board = createBoard()
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (board[r][c] !== null) continue
+        for (const color of ['red', 'white'] as const) {
+          let same = 0
+          for (const [dr, dc] of [
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+          ]) {
+            const nr = r + dr
+            const nc = c + dc
+            if (
+              nr >= 0 &&
+              nr < BOARD_SIZE &&
+              nc >= 0 &&
+              nc < BOARD_SIZE &&
+              board[nr][nc] === color
+            ) {
+              same++
+            }
+          }
+          expect(isCellPlayable(board, r, c, color, false)).toBe(same >= 2)
+        }
+      }
+    }
+  })
 })
 
 describe('checkConnectionWin', () => {
@@ -196,6 +238,29 @@ describe('checkConnectionWin', () => {
     const board = createBoard()
     expect(checkConnectionWin(board, 'red')).toBe(false)
     expect(checkConnectionWin(board, 'white')).toBe(false)
+  })
+
+  it('detects a winding red path from top to bottom', () => {
+    const board = boardWith([
+      [1, 1, 'red'],
+      [3, 1, 'red'],
+      [4, 2, 'red'],
+      [5, 3, 'red'],
+      [7, 3, 'red'],
+      [9, 3, 'red'],
+    ])
+    expect(checkConnectionWin(board, 'red')).toBe(true)
+  })
+
+  it('does not detect a winding path with a missing link', () => {
+    const board = boardWith([
+      [1, 1, 'red'],
+      [3, 1, 'red'],
+      [5, 3, 'red'],
+      [7, 3, 'red'],
+      [9, 3, 'red'],
+    ])
+    expect(checkConnectionWin(board, 'red')).toBe(false)
   })
 })
 
@@ -252,6 +317,29 @@ describe('checkSurroundWin', () => {
     expect(checkSurroundWin(createBoard(), 'red')).toBe(false)
     expect(checkSurroundWin(createBoard(), 'white')).toBe(false)
   })
+
+  it('detects a box-in of a two-token white group with an enclosed empty cell', () => {
+    const board = boardWith([
+      [2, 3, 'white'],
+      [2, 4, 'white'],
+      [1, 2, 'red'],
+      [1, 3, 'red'],
+      [1, 4, 'red'],
+      [3, 2, 'red'],
+      [3, 3, 'red'],
+      [3, 4, 'red'],
+    ])
+    expect(checkSurroundWin(board, 'red')).toBe(true)
+  })
+
+  it('does not count a red ring enclosing only empty cells', () => {
+    const board = boardWith([
+      [1, 2, 'red'],
+      [3, 2, 'red'],
+      [2, 3, 'red'],
+    ])
+    expect(checkSurroundWin(board, 'red')).toBe(false)
+  })
 })
 
 describe('isBoardFull', () => {
@@ -268,5 +356,28 @@ describe('isBoardFull', () => {
       }
     }
     expect(isBoardFull(board)).toBe(true)
+  })
+
+  it('ignores the unplayable border ring', () => {
+    const board = createBoard()
+    for (let r = 1; r < 10; r++) {
+      for (let c = 1; c < 10; c++) {
+        if (board[r][c] === null) board[r][c] = 'white'
+      }
+    }
+    expect(board[0][0]).toBeNull()
+    expect(board[0][2]).toBeNull()
+    expect(board[2][0]).toBeNull()
+    expect(isBoardFull(board)).toBe(true)
+  })
+
+  it('is false when a single interior cell is empty', () => {
+    const board = createBoard()
+    for (let r = 1; r < 10; r++) {
+      for (let c = 1; c < 10; c++) {
+        if (board[r][c] === null && !(r === 5 && c === 5)) board[r][c] = 'white'
+      }
+    }
+    expect(isBoardFull(board)).toBe(false)
   })
 })

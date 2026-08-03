@@ -56,6 +56,26 @@ describe('gameReducer', () => {
     expect(next).toBe(state)
   })
 
+  it('rejects a placement with no valid connection', () => {
+    const state = gameReducer(initialState, { type: 'PLACE', row: 2, col: 0 })
+    expect(state).toBe(initialState)
+    expect(state.board[2][0]).toBeNull()
+    expect(state.currentPlayer).toBe('red')
+  })
+
+  it('rejects an invalid white placement', () => {
+    const afterRed = gameReducer(initialState, { type: 'PLACE', row: 1, col: 1 })
+    const state = gameReducer(afterRed, { type: 'PLACE', row: 0, col: 2 })
+    expect(state).toBe(afterRed)
+    expect(state.board[0][2]).toBeNull()
+    expect(state.currentPlayer).toBe('white')
+  })
+
+  it('rejects a corner placement', () => {
+    const state = gameReducer(initialState, { type: 'PLACE', row: 0, col: 0 })
+    expect(state).toBe(initialState)
+  })
+
   it('awards red a win by connection', () => {
     const moves: Array<[number, number]> = [
       [1, 1], // red
@@ -96,12 +116,56 @@ describe('gameReducer', () => {
     expect(state.alertMessage).toMatch(/Boxing/i)
   })
 
+  it('awards white a win by connection', () => {
+    const moves: Array<[number, number]> = [
+      [2, 2], // red elsewhere
+      [1, 1], // white
+      [4, 2],
+      [1, 3],
+      [6, 2],
+      [1, 5],
+      [8, 2],
+      [1, 7],
+      [10, 2],
+      [1, 9], // white completes row 1 -> connection
+    ]
+    let state = initialState
+    for (const [row, col] of moves) {
+      state = gameReducer(state, { type: 'PLACE', row, col })
+    }
+    expect(state.gameOver).toBe(true)
+    expect(state.winner).toBe('white')
+    expect(state.alertMessage).toMatch(/Connection/i)
+  })
+
+  it('awards white a win by boxing in a red token', () => {
+    const moves: Array<[number, number]> = [
+      [4, 6], // red elsewhere
+      [1, 3], // white: top side
+      [6, 6],
+      [3, 3], // white: bottom side
+      [8, 6],
+      [2, 2], // white: left side
+      [10, 6],
+      [2, 4], // white: right side -> box completed
+    ]
+    let state = initialState
+    for (const [row, col] of moves) {
+      state = gameReducer(state, { type: 'PLACE', row, col })
+    }
+    expect(state.gameOver).toBe(true)
+    expect(state.winner).toBe('white')
+    expect(state.alertMessage).toMatch(/Boxing/i)
+  })
+
   it('declares a draw when both players exhaust their reserves', () => {
     const state = makeState({
       tilesPlaced: { red: MAX_TILES, white: MAX_TILES - 1 },
       currentPlayer: 'white',
     })
     const next = gameReducer(state, { type: 'PLACE', row: 2, col: 0 })
+    expect(next.tilesPlaced.white).toBe(MAX_TILES)
+    expect(next.board[2][0]).toBe('white')
     expect(next.gameOver).toBe(true)
     expect(next.winner).toBeNull()
     expect(next.alertMessage).toMatch(/draw/i)
@@ -109,6 +173,12 @@ describe('gameReducer', () => {
 
   it('RESET restores the initial state', () => {
     const state = gameReducer(initialState, { type: 'RESET' })
+    expect(state).toEqual(initialState)
+  })
+
+  it('RESET from a finished game restores the initial state', () => {
+    const finished = winByRedConnection()
+    const state = gameReducer(finished, { type: 'RESET' })
     expect(state).toEqual(initialState)
   })
 

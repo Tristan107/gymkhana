@@ -4,7 +4,6 @@ import {
   checkConnectionWin,
   checkSurroundWin,
   isCellPlayable,
-  isFixedPeg,
 } from './logic'
 
 export interface Move {
@@ -12,10 +11,17 @@ export interface Move {
   col: number
 }
 
+const DIRS: Array<[number, number]> = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+]
+
 function getValidMoves(board: Board, player: Player, gameOver: boolean): Move[] {
   const moves: Move[] = []
-  for (let row = 1; row < BOARD_SIZE - 1; row++) {
-    for (let col = 1; col < BOARD_SIZE - 1; col++) {
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
       if (board[row][col] === null && isCellPlayable(board, row, col, player, gameOver)) {
         moves.push({ row, col })
       }
@@ -74,12 +80,7 @@ function getComponents(board: Board, color: Player): Move[][] {
       while (queue.length > 0) {
         const current = queue.shift() as Move
         cells.push(current)
-        for (const [dr, dc] of [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ]) {
+        for (const [dr, dc] of DIRS) {
           const nr = current.row + dr
           const nc = current.col + dc
           if (
@@ -101,133 +102,140 @@ function getComponents(board: Board, color: Player): Move[][] {
   return components
 }
 
-function largestComponentSize(board: Board, color: Player): number {
-  let largest = 0
-  for (const component of getComponents(board, color)) {
-    largest = Math.max(largest, component.length)
-  }
-  return largest
-}
-
-function advanceTowardWin(board: Board, color: Player): number {
-  let advance = 0
-  for (const component of getComponents(board, color)) {
-    let touchesStart = false
-    let max = -Infinity
-    if (color === 'red') {
-      for (const cell of component) {
-        if (cell.row === 0) touchesStart = true
-        max = Math.max(max, cell.row)
-      }
-    } else {
-      for (const cell of component) {
-        if (cell.col === 0) touchesStart = true
-        max = Math.max(max, cell.col)
-      }
-    }
-    if (touchesStart && max !== -Infinity) {
-      advance = Math.max(advance, max + 1)
-    }
-  }
-  return advance
-}
-
-function nearEdge(cell: Move): boolean {
+function isCorner(row: number, col: number): boolean {
   return (
-    cell.row <= 1 ||
-    cell.row >= BOARD_SIZE - 2 ||
-    cell.col <= 1 ||
-    cell.col >= BOARD_SIZE - 2
+    (row === 0 || row === BOARD_SIZE - 1) &&
+    (col === 0 || col === BOARD_SIZE - 1)
   )
 }
 
-function escapeRoutes(board: Board, component: Move[], color: Player): number {
+function componentLiberties(board: Board, component: Move[], color: Player): Move[] {
   const seen = new Set<string>()
-  let routes = 0
+  const liberties: Move[] = []
   for (const cell of component) {
-    for (const [dr, dc] of [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-    ]) {
+    for (const [dr, dc] of DIRS) {
       const nr = cell.row + dr
       const nc = cell.col + dc
       if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-      if (isFixedPeg(nr, nc)) continue
+      if (board[nr][nc] !== null) continue
+      if (!isCellPlayable(board, nr, nc, color, false)) continue
       const key = `${nr},${nc}`
-      if (board[nr][nc] === null && isCellPlayable(board, nr, nc, color, false) && !seen.has(key)) {
+      if (seen.has(key)) continue
+      seen.add(key)
+      liberties.push({ row: nr, col: nc })
+    }
+  }
+  return liberties
+}
+
+function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move | null {
+  for (const component of getComponents(board, player)) {
+    const liberties = componentLiberties(board, component, player)
+    if (liberties.length !== 1) continue
+    const liberty = liberties[0]
+    if (moves.some((move) => move.row === liberty.row && move.col === liberty.col)) {
+      return liberty
+    }
+  }
+  return null
+}
+
+function boxInTilesNeeded(board: Board, color: Player): number {
+  const opponent = OPPONENT[color]
+  let minimum = Infinity
+  for (const component of getComponents(board, opponent)) {
+    const seen = new Set<string>()
+    let liberties = 0
+    for (const cell of component) {
+      for (const [dr, dc] of DIRS) {
+        const nr = cell.row + dr
+        const nc = cell.col + dc
+        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+        if (board[nr][nc] !== null || isCorner(nr, nc)) continue
+        const key = `${nr},${nc}`
+        if (seen.has(key)) continue
         seen.add(key)
-        routes++
+        liberties++
+      }
+    }
+    minimum = Math.min(minimum, liberties)
+  }
+  return minimum
+}
+
+function tilesToConnect(board: Board, color: Player): number {
+  const horizontal = color === 'white'
+  const dist: number[][] = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => Infinity)
+  )
+  const deque: number[] = []
+
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const row = horizontal ? i : 0
+    const col = horizontal ? 0 : i
+    const cell = board[row][col]
+    if (cell === OPPONENT[color]) continue
+    if (isCorner(row, col) && cell === null) continue
+    const weight = cell === color ? 0 : 1
+    dist[row][col] = weight
+    if (weight === 0) deque.unshift(row * BOARD_SIZE + col)
+    else deque.push(row * BOARD_SIZE + col)
+  }
+
+  while (deque.length > 0) {
+    const index = deque.shift() as number
+    const row = Math.floor(index / BOARD_SIZE)
+    const col = index % BOARD_SIZE
+    for (const [dr, dc] of DIRS) {
+      const nr = row + dr
+      const nc = col + dc
+      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+      if (board[nr][nc] === OPPONENT[color]) continue
+      if (board[nr][nc] === null && isCorner(nr, nc)) continue
+      const weight = board[nr][nc] === color ? 0 : 1
+      if (dist[row][col] + weight < dist[nr][nc]) {
+        dist[nr][nc] = dist[row][col] + weight
+        if (weight === 0) deque.unshift(nr * BOARD_SIZE + nc)
+        else deque.push(nr * BOARD_SIZE + nc)
       }
     }
   }
-  return routes
-}
 
-// Counts connected components of `color` sitting near the board edge that have
-// too few outward escape routes left, leaving them vulnerable to a box-in.
-function edgeTrapVulnerability(board: Board, color: Player): number {
-  const danger = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => false)
-  )
-  for (const component of getComponents(board, color)) {
-    if (!component.some(nearEdge)) continue
-    if (escapeRoutes(board, component, color) <= 1) {
-      for (const cell of component) danger[cell.row][cell.col] = true
-    }
+  let minimum = Infinity
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const row = horizontal ? i : BOARD_SIZE - 1
+    const col = horizontal ? BOARD_SIZE - 1 : i
+    minimum = Math.min(minimum, dist[row][col])
   }
-  return danger.flat().filter(Boolean).length
+  return minimum
 }
 
-function extendScore(board: Board, move: Move, player: Player): number {
-  const next = place(board, move, player)
-  const opponent = OPPONENT[player]
-
-  let adjacency = 0
-  for (const [dr, dc] of [
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-  ]) {
-    const nr = move.row + dr
-    const nc = move.col + dc
-    if (
-      nr >= 0 &&
-      nr < BOARD_SIZE &&
-      nc >= 0 &&
-      nc < BOARD_SIZE &&
-      board[nr][nc] === player &&
-      !isFixedPeg(nr, nc)
-    ) {
-      adjacency++
-    }
-  }
-
-  const largest = largestComponentSize(next, player)
-  const advance = advanceTowardWin(next, player)
-  const threat = winningMoves(next, opponent).length
-  const ownTrap = edgeTrapVulnerability(next, player)
-
-  return (
-    60 * adjacency + 4 * largest + 25 * advance - 150 * threat - 300 * ownTrap
-  )
-}
-
-function pickBestExtend(board: Board, moves: Move[], player: Player): Move {
-  let bestScore = -Infinity
+function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
+  const center = Math.floor(BOARD_SIZE / 2)
+  let bestScore = Infinity
   let bestMoves: Move[] = []
   for (const move of moves) {
-    const score = extendScore(board, move, player)
-    if (score > bestScore) {
+    const next = place(board, move, player)
+    const score = Math.min(tilesToConnect(next, player), boxInTilesNeeded(next, player))
+    if (score < bestScore) {
       bestScore = score
       bestMoves = [move]
     } else if (score === bestScore) {
       bestMoves.push(move)
     }
   }
-  return pickRandom(bestMoves)
+  let bestCenter = Infinity
+  let centered: Move[] = []
+  for (const move of bestMoves) {
+    const distance = (move.row - center) ** 2 + (move.col - center) ** 2
+    if (distance < bestCenter) {
+      bestCenter = distance
+      centered = [move]
+    } else if (distance === bestCenter) {
+      centered.push(move)
+    }
+  }
+  return pickRandom(centered)
 }
 
 function pickRandom<T>(arr: T[]): T {
@@ -262,8 +270,15 @@ export function chooseMove(
       const next = place(board, move, player)
       return winningMoves(next, opponent).length === 0 && !hasFork(next, opponent)
     })
-    if (safe.length > 0) return pickBestExtend(board, safe, player)
+    if (safe.length > 0) {
+      const defense = findLibertyDefense(board, player, safe)
+      if (defense) return defense
+      return pickBestStrategic(board, safe, player)
+    }
   }
 
-  return pickBestExtend(board, moves, player)
+  const defense = findLibertyDefense(board, player, moves)
+  if (defense) return defense
+
+  return pickBestStrategic(board, moves, player)
 }

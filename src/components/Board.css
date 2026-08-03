@@ -15,6 +15,18 @@
   border-radius: 4px;
 }
 
+@media (max-width: 520px) {
+  .board {
+    --cell: 32px;
+  }
+}
+
+@media (max-width: 400px) {
+  .board {
+    --cell: 26px;
+  }
+}
+
 .cell {
   position: relative;
   width: var(--cell);

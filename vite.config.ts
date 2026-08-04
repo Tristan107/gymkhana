@@ -31,4 +31,5 @@ export default defineConfig({
   test: {
     slowTestThreshold: 2000,
   },
+  base: '/gymkhana/', // Exact github repo name for hosting
 })

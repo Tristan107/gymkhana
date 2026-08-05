@@ -3,6 +3,7 @@ import Board from './Board'
 import GameOverOverlay from './GameOverOverlay'
 import Header from './Header'
 import StatusBar from './StatusBar'
+import { MAX_TILES } from '../constants'
 
 interface GameScreenProps {
   currentPlayer: Player
@@ -45,7 +46,6 @@ function GameScreen({
         <div className="flex flex-col items-center gap-[15px]">
           <StatusBar
             currentPlayer={currentPlayer}
-            tilesPlaced={tilesPlaced}
             gameMode={gameMode}
             humanPlayer={humanPlayer}
           />
@@ -90,6 +90,16 @@ function GameScreen({
           >
             {playAgainLabel}
           </button>
+          <div className="mt-1 flex flex-row justify-center gap-3 min-[901px]:flex-col">
+            <div className="flex items-center gap-1.5 text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
+              <span className="h-3 w-3 rounded-[2px] bg-[#ff3344]" />
+              <span>Red tiles left: {MAX_TILES - tilesPlaced.red}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
+              <span className="h-3 w-3 rounded-[2px] bg-white" />
+              <span>White tiles left: {MAX_TILES - tilesPlaced.white}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

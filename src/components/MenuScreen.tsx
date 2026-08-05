@@ -13,7 +13,7 @@ const TAGLINE = 'Easy to Learn, hard to master.'
 const PRIMARY_BUTTON =
   'cursor-pointer rounded-md border-none bg-[#e0e0e0] px-5 py-3 text-[15px] font-bold text-[#333] transition-colors duration-200 active:scale-[0.98] hover:bg-[#c8c8c8] [font-family:Arial,sans-serif]'
 const GOLD_BUTTON =
-  'cursor-pointer rounded-md border-none bg-[#f6b252] px-5 py-2.5 text-[13px] font-bold text-[#1a1a1a] transition-colors duration-200 active:scale-[0.98] hover:brightness-110 [font-family:Arial,sans-serif]'
+  'cursor-pointer rounded-md border-none bg-[#f6b252] px-5 py-3 text-[15px] font-bold text-[#1a1a1a] transition-colors duration-200 active:scale-[0.98] hover:brightness-110 [font-family:Arial,sans-serif]'
 
 function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: MenuScreenProps) {
   const [sidePickerOpen, setSidePickerOpen] = useState(false)

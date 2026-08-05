@@ -1,5 +1,5 @@
 export const firebaseConfig = {
-  apiKey: 'AIzaSyD6Ezw9IVRhd-xegwV9Cy84WRBH3y_psX8',
+  apiKey: 'AIzaSyD6Ezw9IVRhd-xegwV9Cy84WRBH3y_psX8', // gitleaks:allow
   authDomain: 'gymkhana-69b62.firebaseapp.com',
   databaseURL: 'https://gymkhana-69b62-default-rtdb.firebaseio.com',
   projectId: 'gymkhana-69b62',

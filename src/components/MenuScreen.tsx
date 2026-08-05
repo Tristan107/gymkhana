@@ -49,11 +49,11 @@ function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: MenuScre
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-3">
-        <button type="button" onClick={onPlayOnline} className={GOLD_BUTTON}>
-          Online 1v1 game
+        <button type="button" onClick={onPlayOnline} className={PRIMARY_BUTTON}>
+          Play online game
         </button>
         <button type="button" onClick={onPlayPvP} className={PRIMARY_BUTTON}>
-          Play vs human
+          Play local game
         </button>
         <button
           type="button"

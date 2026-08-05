@@ -150,12 +150,16 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
 
       {phase.kind === 'form' && (
         <div className="flex w-full max-w-xs flex-col gap-3">
-          <button type="button" onClick={() => setMode('create')} className={BUTTON}>
-            Create a game
-          </button>
-          <button type="button" onClick={() => setMode('join')} className={BUTTON}>
-            Join a game
-          </button>
+          {mode === null && (
+            <>
+              <button type="button" onClick={() => setMode('create')} className={BUTTON}>
+                Create a game
+              </button>
+              <button type="button" onClick={() => setMode('join')} className={BUTTON}>
+                Join a game
+              </button>
+            </>
+          )}
           <button type="button" onClick={onBack} className={GHOST_BUTTON}>
             Back
           </button>

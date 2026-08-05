@@ -4,6 +4,7 @@ import type { Player } from '../types'
 interface MenuScreenProps {
   onPlayPvP: () => void
   onPlayAI: (human: Player) => void
+  onPlayOnline: () => void
   onShowRules: () => void
 }
 
@@ -14,7 +15,7 @@ const PRIMARY_BUTTON =
 const GOLD_BUTTON =
   'cursor-pointer rounded-md border-none bg-[#f6b252] px-5 py-2.5 text-[13px] font-bold text-[#1a1a1a] transition-colors duration-200 active:scale-[0.98] hover:brightness-110 [font-family:Arial,sans-serif]'
 
-function MenuScreen({ onPlayPvP, onPlayAI, onShowRules }: MenuScreenProps) {
+function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: MenuScreenProps) {
   const [sidePickerOpen, setSidePickerOpen] = useState(false)
   const sidePickerRef = useRef<HTMLDialogElement>(null)
 
@@ -48,6 +49,9 @@ function MenuScreen({ onPlayPvP, onPlayAI, onShowRules }: MenuScreenProps) {
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-3">
+        <button type="button" onClick={onPlayOnline} className={GOLD_BUTTON}>
+          Online 1v1 game
+        </button>
         <button type="button" onClick={onPlayPvP} className={PRIMARY_BUTTON}>
           Play vs human
         </button>

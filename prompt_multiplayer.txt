@@ -1,0 +1,11 @@
+Now this project/game is deployed at github.io
+
+what if I wanted to make it a multiplayer game ?
+
+First player would click "Online 1v1 game" and he would chose a color, and it would give him a game instance code or game instance URL (better).
+
+He would be able to copy this code or URL and send it to someone (mail, teams, phone, ...) to challenge him/her at the game.
+
+The challenged player would click on the link or type the code to join the game instance created by the first player and they would be able to play 1v1.
+
+Use firebase as backend.

@@ -15,7 +15,7 @@ export interface GameState {
   winner: Player | null
   tilesPlaced: Record<Player, number>
   alertMessage: string | null
-  gameMode: 'pvp' | 'ai'
+  gameMode: 'pvp' | 'ai' | 'online'
   humanPlayer: Player | null
 }
 

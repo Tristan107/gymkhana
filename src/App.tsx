@@ -1,19 +1,31 @@
-import { useEffect, useReducer, useState } from 'react'
-import Board from './components/Board'
-import GameOverOverlay from './components/GameOverOverlay'
-import Header from './components/Header'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import GameScreen from './components/GameScreen'
 import MenuScreen from './components/MenuScreen'
+import OnlineGameScreen from './components/OnlineGameScreen'
+import OnlineScreen from './components/OnlineScreen'
 import RulesScreen from './components/RulesScreen'
-import StatusBar from './components/StatusBar'
 import { gameReducer, initialState } from './game/reducer'
 import { chooseMove } from './game/lean_ai'
 import { OPPONENT } from './constants'
+import { getPlayerId, getRoomCodeFromUrl } from './firebase/id'
 import type { Player } from './types'
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, initialState)
-  const [screen, setScreen] = useState<'menu' | 'game'>('menu')
+  const [screen, setScreen] = useState<'menu' | 'online' | 'game'>('menu')
   const [rulesScreen, setRulesScreen] = useState(false)
+  const [onlineSession, setOnlineSession] = useState<{ code: string; myColor: Player } | null>(
+    null
+  )
+
+  const playerId = useMemo(() => getPlayerId(), [])
+  const initialCode = useMemo(() => getRoomCodeFromUrl(), [])
+
+  useEffect(() => {
+    if (initialCode !== null) {
+      setScreen('online')
+    }
+  }, [initialCode])
 
   const isAiTurn =
     screen === 'game' &&
@@ -45,8 +57,41 @@ function App() {
     state.tilesPlaced,
   ])
 
+  const handleOnlineGameReady = useCallback((code: string, myColor: Player) => {
+    setOnlineSession({ code, myColor })
+    setScreen('game')
+  }, [])
+
+  const leaveOnline = useCallback(() => {
+    setOnlineSession(null)
+    dispatch({ type: 'RESET' })
+    setScreen('menu')
+  }, [])
+
   if (rulesScreen) {
     return <RulesScreen onBack={() => setRulesScreen(false)} />
+  }
+
+  if (screen === 'online') {
+    return (
+      <OnlineScreen
+        myId={playerId}
+        initialCode={initialCode}
+        onBack={() => setScreen('menu')}
+        onGameReady={handleOnlineGameReady}
+      />
+    )
+  }
+
+  if (screen === 'game' && onlineSession !== null) {
+    return (
+      <OnlineGameScreen
+        code={onlineSession.code}
+        playerId={playerId}
+        onLeave={leaveOnline}
+        onShowRules={() => setRulesScreen(true)}
+      />
+    )
   }
 
   if (screen === 'menu') {
@@ -60,6 +105,7 @@ function App() {
           dispatch({ type: 'START_AI', human })
           setScreen('game')
         }}
+        onPlayOnline={() => setScreen('online')}
         onShowRules={() => setRulesScreen(true)}
       />
     )
@@ -79,64 +125,25 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center p-5 box-border">
-      <Header />
-
-      <div className="flex w-full max-w-[1100px] flex-col items-center gap-10 min-[901px]:flex-row min-[901px]:items-start min-[901px]:justify-center">
-        <div className="flex flex-col items-center gap-[15px]">
-          <StatusBar
-            currentPlayer={state.currentPlayer}
-            tilesPlaced={state.tilesPlaced}
-            gameMode={state.gameMode}
-            humanPlayer={state.humanPlayer}
-          />
-          <div className="relative">
-            <Board
-              board={state.board}
-              currentPlayer={state.currentPlayer}
-              gameOver={state.gameOver}
-              tilesPlaced={state.tilesPlaced}
-              onCellClick={(row, col) => {
-                const isHumanTurn =
-                  state.gameMode !== 'ai' ||
-                  state.humanPlayer === state.currentPlayer
-                if (isHumanTurn) dispatch({ type: 'PLACE', row, col })
-              }}
-            />
-            <GameOverOverlay
-              gameOver={state.gameOver}
-              message={state.alertMessage}
-              winner={state.winner}
-              onPlayAgain={restart}
-            />
-          </div>
-        </div>
-
-        <div className="flex w-full flex-row justify-center gap-3 min-[901px]:w-[160px] min-[901px]:flex-col">
-          <button
-            type="button"
-            onClick={goToMenu}
-            className="cursor-pointer rounded-md border border-white/20 bg-transparent px-5 py-2.5 text-[13px] font-bold text-[#ccc] transition-colors duration-200 hover:bg-white/5 [font-family:Arial,sans-serif]"
-          >
-            Menu
-          </button>
-          <button
-            type="button"
-            onClick={() => setRulesScreen(true)}
-            className="cursor-pointer rounded-md border-none bg-[#f6b252] px-5 py-2.5 text-[13px] font-bold text-[#1a1a1a] transition-colors duration-200 active:scale-[0.98] hover:brightness-110 [font-family:Arial,sans-serif]"
-          >
-            How to Play
-          </button>
-          <button
-            type="button"
-            onClick={restart}
-            className="cursor-pointer rounded-md border-none bg-[#e0e0e0] px-6 py-2.5 text-[13px] font-bold text-[#333] transition-colors duration-200 active:scale-[0.98] hover:bg-[#c8c8c8] [font-family:Arial,sans-serif]"
-          >
-            Restart
-          </button>
-        </div>
-      </div>
-    </div>
+    <GameScreen
+      currentPlayer={state.currentPlayer}
+      tilesPlaced={state.tilesPlaced}
+      gameMode={state.gameMode}
+      humanPlayer={state.humanPlayer}
+      board={state.board}
+      gameOver={state.gameOver}
+      alertMessage={state.alertMessage}
+      winner={state.winner}
+      onCellClick={(row, col) => {
+        const isHumanTurn =
+          state.gameMode !== 'ai' || state.humanPlayer === state.currentPlayer
+        if (isHumanTurn) dispatch({ type: 'PLACE', row, col })
+      }}
+      onPlayAgain={restart}
+      playAgainLabel="Play Again"
+      onMenu={goToMenu}
+      onShowRules={() => setRulesScreen(true)}
+    />
   )
 }
 

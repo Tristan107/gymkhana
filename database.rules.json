@@ -1,0 +1,35 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": "(!data.exists() && newData.child('status').val() === 'waiting' && newData.child('host').exists()) || (!newData.exists() && data.exists())",
+        "moves": {
+          ".write": false,
+          "$moveId": {
+            ".write": "!data.exists() && !root.child('rooms/' + $roomId + '/winner').exists() && root.child('rooms/' + $roomId + '/nextTurn').val() === newData.child('p').val()",
+            ".validate": "newData.hasChildren(['p', 'r', 'c']) && (newData.child('p').val() === 'red' || newData.child('p').val() === 'white') && newData.child('r').val() >= 0 && newData.child('r').val() <= 10 && newData.child('c').val() >= 0 && newData.child('c').val() <= 10"
+          }
+        },
+        "nextTurn": {
+          ".write": "data.exists() && (newData.val() === 'red' || newData.val() === 'white') && newData.val() !== data.val()"
+        },
+        "guest": {
+          ".write": "!data.exists() && root.child('rooms/' + $roomId + '/status').val() === 'waiting' && newData.hasChildren(['playerId', 'color']) && newData.child('color').val() === (root.child('rooms/' + $roomId + '/host/color').val() === 'red' ? 'white' : 'red')"
+        },
+        "status": {
+          ".write": "data.val() === 'waiting' && newData.val() === 'playing'"
+        },
+        "winner": {
+          ".write": "!data.exists() && (newData.val() === 'red' || newData.val() === 'white' || newData.val() === 'draw')"
+        },
+        "host": {
+          ".write": false
+        },
+        "createdAt": {
+          ".write": false
+        }
+      }
+    }
+  }
+}

@@ -6,9 +6,16 @@ interface GameOverOverlayProps {
   message: string | null
   winner: Player | null
   onPlayAgain: () => void
+  playAgainLabel?: string
 }
 
-function GameOverOverlay({ gameOver, message, winner, onPlayAgain }: GameOverOverlayProps) {
+function GameOverOverlay({
+  gameOver,
+  message,
+  winner,
+  onPlayAgain,
+  playAgainLabel = 'Play Again',
+}: GameOverOverlayProps) {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
@@ -40,7 +47,7 @@ function GameOverOverlay({ gameOver, message, winner, onPlayAgain }: GameOverOve
         onClick={onPlayAgain}
         className="cursor-pointer rounded-md border-none bg-[#e0e0e0] px-6 py-2.5 text-[13px] font-bold text-[#333] transition-colors duration-200 active:scale-[0.98] hover:bg-[#c8c8c8] [font-family:Arial,sans-serif]"
       >
-        Play Again
+        {playAgainLabel}
       </button>
     </div>
   )

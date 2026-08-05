@@ -7,7 +7,7 @@ import RulesScreen from './components/RulesScreen'
 import { gameReducer, initialState } from './game/reducer'
 import { chooseMove } from './game/lean_ai'
 import { OPPONENT } from './constants'
-import { getPlayerId, getRoomCodeFromUrl } from './firebase/id'
+import { getPlayerId, getRoomCodeFromUrl, clearRoomCodeFromUrl } from './firebase/id'
 import type { Player } from './types'
 
 function App() {
@@ -63,6 +63,7 @@ function App() {
   }, [])
 
   const leaveOnline = useCallback(() => {
+    clearRoomCodeFromUrl()
     setOnlineSession(null)
     dispatch({ type: 'RESET' })
     setScreen('menu')
@@ -77,7 +78,10 @@ function App() {
       <OnlineScreen
         myId={playerId}
         initialCode={initialCode}
-        onBack={() => setScreen('menu')}
+        onBack={() => {
+          clearRoomCodeFromUrl()
+          setScreen('menu')
+        }}
         onGameReady={handleOnlineGameReady}
       />
     )

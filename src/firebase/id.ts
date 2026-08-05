@@ -44,3 +44,11 @@ export function getShareUrl(code: string): string {
   const base = pathname.endsWith('/') ? pathname : `${pathname}/`
   return `${origin}${base}?r=${code}`
 }
+
+export function clearRoomCodeFromUrl(): void {
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has('r')) return
+  url.searchParams.delete('r')
+  const query = url.searchParams.toString()
+  window.history.replaceState(null, '', `${url.pathname}${query === '' ? '' : `?${query}`}`)
+}

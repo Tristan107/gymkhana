@@ -9,6 +9,7 @@ interface BoardProps {
   currentPlayer: Player
   gameOver: boolean
   tilesPlaced: Record<Player, number>
+  interactive: boolean
   onCellClick: (row: number, col: number) => void
 }
 
@@ -17,7 +18,7 @@ interface HoveredCell {
   col: number
 }
 
-function Board({ board, currentPlayer, gameOver, tilesPlaced, onCellClick }: BoardProps) {
+function Board({ board, currentPlayer, gameOver, tilesPlaced, interactive, onCellClick }: BoardProps) {
   const [hovered, setHovered] = useState<HoveredCell | null>(null)
 
   const cells = Array.from({ length: BOARD_SIZE }, (_, row) =>
@@ -32,10 +33,11 @@ function Board({ board, currentPlayer, gameOver, tilesPlaced, onCellClick }: Boa
           currentPlayer={currentPlayer}
           gameOver={gameOver}
           tilesPlaced={tilesPlaced}
+          interactive={interactive}
           hovered={isHovered}
           onClick={() => onCellClick(row, col)}
-          onMouseEnter={() => setHovered({ row, col })}
-          onMouseLeave={() => setHovered(null)}
+          onMouseEnter={interactive ? () => setHovered({ row, col }) : undefined}
+          onMouseLeave={interactive ? () => setHovered(null) : undefined}
         />
       )
     })

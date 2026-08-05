@@ -18,6 +18,7 @@ interface GameScreenProps {
   playAgainLabel: string
   onMenu: () => void
   onShowRules: () => void
+  interactive?: boolean
 }
 
 function GameScreen({
@@ -34,6 +35,7 @@ function GameScreen({
   playAgainLabel,
   onMenu,
   onShowRules,
+  interactive = true,
 }: GameScreenProps) {
   return (
     <div className="flex min-h-screen flex-col items-center p-5 box-border">
@@ -53,6 +55,7 @@ function GameScreen({
               currentPlayer={currentPlayer}
               gameOver={gameOver}
               tilesPlaced={tilesPlaced}
+              interactive={interactive}
               onCellClick={onCellClick}
             />
             <GameOverOverlay

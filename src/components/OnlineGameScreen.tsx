@@ -60,6 +60,7 @@ function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: OnlineGameSc
         onCellClick={(row, col) => {
           if (isMyTurn) place(row, col)
         }}
+        interactive={isMyTurn}
         onPlayAgain={handleLeave}
         playAgainLabel="Leave game"
         onMenu={handleLeave}

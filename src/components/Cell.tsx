@@ -9,10 +9,11 @@ interface CellProps {
   currentPlayer: Player
   gameOver: boolean
   tilesPlaced: Record<Player, number>
+  interactive: boolean
   hovered: boolean
   onClick: () => void
-  onMouseEnter: () => void
-  onMouseLeave: () => void
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
 }
 
 function Cell({
@@ -22,6 +23,7 @@ function Cell({
   currentPlayer,
   gameOver,
   tilesPlaced,
+  interactive,
   hovered,
   onClick,
   onMouseEnter,
@@ -30,19 +32,19 @@ function Cell({
   const value = board[row][col]
   const peg = isFixedPeg(row, col)
   const playable = value === null && isCellPlayable(board, row, col, currentPlayer, gameOver)
-  const previewVisible = playable && hovered && tilesPlaced[currentPlayer] < MAX_TILES
+  const previewVisible = interactive && playable && hovered && tilesPlaced[currentPlayer] < MAX_TILES
 
   let className = 'cell'
   if (value !== null) className += ' occupied'
-  else if (playable) className += ' playable'
+  else if (playable && interactive) className += ' playable'
   else className += ' unplayable'
 
   return (
     <div
       className={className}
-      onClick={playable ? onClick : undefined}
-      onMouseEnter={playable ? onMouseEnter : undefined}
-      onMouseLeave={playable ? onMouseLeave : undefined}
+      onClick={playable && interactive ? onClick : undefined}
+      onMouseEnter={interactive && playable ? onMouseEnter : undefined}
+      onMouseLeave={interactive && playable ? onMouseLeave : undefined}
     >
       {value !== null ? (
         peg ? (

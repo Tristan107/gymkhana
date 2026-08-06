@@ -16,6 +16,8 @@ export interface RoomData {
   host: RoomMember
   guest: RoomMember | null
   winner: Player | 'draw' | null
+  round?: number
+  rematchRequester?: string | null
 }
 
 export interface MoveData {
@@ -97,6 +99,35 @@ export async function appendMove(code: string, move: MoveData): Promise<void> {
 
 export async function setWinner(code: string, winner: Player | 'draw'): Promise<void> {
   await update(roomRef(code), { winner })
+}
+
+export async function proposeRematch(code: string, playerId: string): Promise<void> {
+  await update(roomRef(code), { rematchRequester: playerId })
+}
+
+export async function cancelRematch(code: string): Promise<void> {
+  await update(roomRef(code), { rematchRequester: null })
+}
+
+export function buildRematchPayload(room: RoomData): Record<string, unknown> | null {
+  if (room.guest === null || room.rematchRequester == null) return null
+  return {
+    'host/color': OPPONENT[room.host.color],
+    'guest/color': OPPONENT[room.guest.color],
+    nextTurn: 'red',
+    winner: null,
+    round: (room.round ?? 0) + 1,
+    rematchRequester: null,
+    moves: null,
+  }
+}
+
+export async function acceptRematch(code: string): Promise<void> {
+  const snapshot = await get(roomRef(code))
+  if (!snapshot.exists()) return
+  const payload = buildRematchPayload(snapshot.val() as RoomData)
+  if (payload === null) return
+  await update(roomRef(code), payload)
 }
 
 export async function deleteRoom(code: string): Promise<void> {

@@ -7,6 +7,8 @@ interface GameOverOverlayProps {
   winner: Player | null
   onPlayAgain: () => void
   playAgainLabel?: string
+  onRematch?: () => void
+  rematchLabel?: string
 }
 
 function GameOverOverlay({
@@ -15,6 +17,8 @@ function GameOverOverlay({
   winner,
   onPlayAgain,
   playAgainLabel = 'Play Again',
+  onRematch,
+  rematchLabel = 'Rematch',
 }: GameOverOverlayProps) {
   const [dismissed, setDismissed] = useState(false)
 
@@ -49,6 +53,15 @@ function GameOverOverlay({
       >
         {playAgainLabel}
       </button>
+      {onRematch !== undefined && (
+        <button
+          type="button"
+          onClick={onRematch}
+          className="cursor-pointer rounded-md border border-white/20 bg-transparent px-6 py-2.5 text-[13px] font-bold text-[#ccc] transition-colors duration-200 hover:bg-white/5 [font-family:Arial,sans-serif]"
+        >
+          {rematchLabel}
+        </button>
+      )}
     </div>
   )
 }

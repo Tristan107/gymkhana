@@ -5,26 +5,32 @@
         ".read": true,
         ".write": "(!data.exists() && newData.child('status').val() === 'waiting' && newData.child('host').exists()) || (!newData.exists() && data.exists())",
         "moves": {
-          ".write": false,
+          ".write": "!newData.exists()",
           "$moveId": {
             ".write": "!data.exists() && !root.child('rooms/' + $roomId + '/winner').exists() && root.child('rooms/' + $roomId + '/nextTurn').val() === newData.child('p').val()",
             ".validate": "newData.hasChildren(['p', 'r', 'c']) && (newData.child('p').val() === 'red' || newData.child('p').val() === 'white') && newData.child('r').val() >= 0 && newData.child('r').val() <= 10 && newData.child('c').val() >= 0 && newData.child('c').val() <= 10"
           }
         },
         "nextTurn": {
-          ".write": "data.exists() && (newData.val() === 'red' || newData.val() === 'white') && newData.val() !== data.val()"
+          ".write": "newData.val() === 'red' || newData.val() === 'white'"
         },
         "guest": {
-          ".write": "!data.exists() && root.child('rooms/' + $roomId + '/status').val() === 'waiting' && newData.hasChildren(['playerId', 'color']) && newData.child('color').val() === (root.child('rooms/' + $roomId + '/host/color').val() === 'red' ? 'white' : 'red')"
+          ".write": "(!data.exists() && root.child('rooms/' + $roomId + '/status').val() === 'waiting' && newData.hasChildren(['playerId', 'color']) && newData.child('color').val() === (root.child('rooms/' + $roomId + '/host/color').val() === 'red' ? 'white' : 'red')) || (data.exists() && newData.hasChildren(['playerId', 'color']) && newData.child('playerId').val() === data.child('playerId').val() && (newData.child('color').val() === 'red' || newData.child('color').val() === 'white'))"
         },
         "status": {
           ".write": "data.val() === 'waiting' && newData.val() === 'playing'"
         },
         "winner": {
-          ".write": "!data.exists() && (newData.val() === 'red' || newData.val() === 'white' || newData.val() === 'draw')"
+          ".write": "(!data.exists() && (newData.val() === 'red' || newData.val() === 'white' || newData.val() === 'draw')) || !newData.exists()"
         },
         "host": {
-          ".write": false
+          ".write": "!data.exists() || (newData.hasChildren(['playerId', 'color']) && newData.child('playerId').val() === data.child('playerId').val() && (newData.child('color').val() === 'red' || newData.child('color').val() === 'white'))"
+        },
+        "round": {
+          ".write": "(!data.exists() && newData.val() === 1) || (data.exists() && newData.val() === data.val() + 1)"
+        },
+        "rematchRequester": {
+          ".write": "newData.val() === null || newData.isString()"
         },
         "createdAt": {
           ".write": false

@@ -4,8 +4,11 @@ import { applyMoveLog } from '../game/replay'
 import type { GameState } from '../game/reducer'
 import type { Player } from '../types'
 import {
+  acceptRematch as acceptRematchRoom,
   appendMove,
+  cancelRematch as cancelRematchRoom,
   deleteRoom,
+  proposeRematch as proposeRematchRoom,
   setWinner,
   watchMoves,
   watchRoom,
@@ -22,6 +25,9 @@ export interface OnlineGameHandle {
   error: string | null
   place: (row: number, col: number) => void
   leave: () => void
+  proposeRematch: () => void
+  cancelRematch: () => void
+  acceptRematch: () => void
 }
 
 export function useOnlineGame(code: string, playerId: string): OnlineGameHandle {
@@ -31,6 +37,7 @@ export function useOnlineGame(code: string, playerId: string): OnlineGameHandle 
   const [moves, setMoves] = useState<MoveData[]>([])
   const [error, setError] = useState<string | null>(null)
   const pendingRef = useRef(false)
+  const lastRoundRef = useRef<number | null>(null)
 
   useEffect(() => {
     return watchRoom(code, (next) => {
@@ -40,6 +47,12 @@ export function useOnlineGame(code: string, playerId: string): OnlineGameHandle 
       } else {
         setClosed(false)
         setRoom(next)
+        const round = next.round ?? 0
+        if (lastRoundRef.current !== null && lastRoundRef.current !== round) {
+          pendingRef.current = false
+          setMoves([])
+        }
+        lastRoundRef.current = round
       }
     })
   }, [code])
@@ -93,5 +106,39 @@ export function useOnlineGame(code: string, playerId: string): OnlineGameHandle 
     deleteRoom(code).catch(() => {})
   }, [code])
 
-  return { room, myColor, state, isMyTurn, isConnected, closed, error, place, leave }
+  const proposeRematch = useCallback(() => {
+    if (closed) return
+    proposeRematchRoom(code, playerId).catch(() =>
+      setError('Could not send your rematch request. Try again.')
+    )
+  }, [code, playerId, closed])
+
+  const cancelRematch = useCallback(() => {
+    if (closed) return
+    cancelRematchRoom(code).catch(() =>
+      setError('Could not cancel your rematch request. Try again.')
+    )
+  }, [code, closed])
+
+  const acceptRematch = useCallback(() => {
+    if (closed) return
+    acceptRematchRoom(code).catch(() =>
+      setError('Could not start the rematch. Try again.')
+    )
+  }, [code, closed])
+
+  return {
+    room,
+    myColor,
+    state,
+    isMyTurn,
+    isConnected,
+    closed,
+    error,
+    place,
+    leave,
+    proposeRematch,
+    cancelRematch,
+    acceptRematch,
+  }
 }

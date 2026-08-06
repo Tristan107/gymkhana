@@ -9,12 +9,40 @@ interface OnlineGameScreenProps {
 }
 
 function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: OnlineGameScreenProps) {
-  const { room, state, isMyTurn, error, closed, place, leave } = useOnlineGame(code, playerId)
+  const {
+    room,
+    state,
+    isMyTurn,
+    error,
+    closed,
+    place,
+    leave,
+    proposeRematch,
+    cancelRematch,
+    acceptRematch,
+  } = useOnlineGame(code, playerId)
 
   const handleLeave = () => {
     leave()
     onLeave()
   }
+
+  const rematchRequester = room?.rematchRequester ?? null
+  const rematchState =
+    rematchRequester === null ? 'idle' : rematchRequester === playerId ? 'pending' : 'accept'
+
+  const handleRematch = () => {
+    if (rematchState === 'idle') proposeRematch()
+    else if (rematchState === 'pending') cancelRematch()
+    else acceptRematch()
+  }
+
+  const rematchLabel =
+    rematchState === 'idle'
+      ? 'Rematch'
+      : rematchState === 'pending'
+        ? 'Cancel rematch'
+        : 'Accept rematch'
 
   if (closed && !state.gameOver) {
     return (
@@ -63,6 +91,8 @@ function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: OnlineGameSc
         interactive={isMyTurn}
         onPlayAgain={handleLeave}
         playAgainLabel="Leave game"
+        onRematch={handleRematch}
+        rematchLabel={rematchLabel}
         onMenu={handleLeave}
         onShowRules={onShowRules}
       />

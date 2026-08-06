@@ -91,6 +91,7 @@ function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: OnlineGameSc
         interactive={isMyTurn}
         onPlayAgain={handleLeave}
         playAgainLabel="Leave game"
+        overlayPlayAgain={false}
         onRematch={handleRematch}
         rematchLabel={rematchLabel}
         onMenu={handleLeave}

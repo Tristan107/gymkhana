@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "predeploy": "npm run build",
     "deploy:rules": "firebase deploy --only database",
-    "deploy": "npm run deploy:rules && gh-pages -d dist"
+    "deploy": "npm run deploy:rules"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -27,7 +27,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "firebase-tools": "^14.0.0",
-    "gh-pages": "^6.3.0",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",

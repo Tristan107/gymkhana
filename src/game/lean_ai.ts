@@ -49,20 +49,122 @@ function winningMoves(board: Board, player: Player): Move[] {
 }
 
 function findForkMove(board: Board, player: Player): Move | null {
+  const opponent = OPPONENT[player]
   for (const move of getValidMoves(board, player, false)) {
-    if (winningMoves(place(board, move, player), player).length >= 2) return move
+    const after = place(board, move, player)
+    if (winningMoves(after, player).length >= 2) return move
+    if (chainsWithSinglePlayableLiberty(after, opponent, player).length >= 2) return move
   }
   return null
 }
 
-function hasFork(board: Board, player: Player): boolean {
-  return findForkMove(board, player) !== null
+function createsFork(board: Board, move: Move, attacker: Player, defender: Player): boolean {
+  if (board[move.row][move.col] !== null) return false
+  const after = place(board, move, attacker)
+  return (
+    winningMoves(after, attacker).length >= 2 ||
+    chainsWithSinglePlayableLiberty(after, defender, attacker).length >= 2
+  )
 }
 
-function findBlockingMove(board: Board, player: Player): Move | null {
+function boxSupportCells(
+  board: Board,
+  winningMove: Move,
+  opponent: Player,
+  ai: Player
+): Set<string> {
+  const after = place(board, winningMove, opponent)
+  const escapable: boolean[][] = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => false)
+  )
+  const queue: Array<{ row: number; col: number }> = []
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    for (const [r, c] of [
+      [0, i],
+      [BOARD_SIZE - 1, i],
+      [i, 0],
+      [i, BOARD_SIZE - 1],
+    ] as Array<[number, number]>) {
+      if (after[r][c] !== opponent && !escapable[r][c]) {
+        escapable[r][c] = true
+        queue.push({ row: r, col: c })
+      }
+    }
+  }
+  while (queue.length > 0) {
+    const { row, col } = queue.shift() as { row: number; col: number }
+    for (const [dr, dc] of DIRS) {
+      const nr = row + dr
+      const nc = col + dc
+      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+      if (after[nr][nc] !== opponent && !escapable[nr][nc]) {
+        escapable[nr][nc] = true
+        queue.push({ row: nr, col: nc })
+      }
+    }
+  }
+  const support = new Set<string>()
+  for (let r = 1; r < BOARD_SIZE - 1; r++) {
+    for (let c = 1; c < BOARD_SIZE - 1; c++) {
+      if (after[r][c] !== ai || escapable[r][c]) continue
+      for (const [dr, dc] of DIRS) {
+        const nr = r + dr
+        const nc = c + dc
+        if (after[nr][nc] === null) support.add(`${nr},${nc}`)
+      }
+    }
+  }
+  return support
+}
+
+function findForkBlock(board: Board, player: Player): Move | null {
   const opponent = OPPONENT[player]
-  for (const move of getValidMoves(board, player, false)) {
-    if (winningMoves(place(board, move, player), opponent).length === 0) return move
+  const legal = getValidMoves(board, player, false)
+
+  for (const fork of getValidMoves(board, opponent, false)) {
+    const afterFork = place(board, fork, opponent)
+    const wins = winningMoves(afterFork, opponent)
+    const threatened = chainsWithSinglePlayableLiberty(afterFork, player, opponent)
+    if (wins.length < 2 && threatened.length < 2) continue
+
+    const candidates: Move[] = []
+    const addCandidate = (move: Move): void => {
+      if (candidates.some((m) => m.row === move.row && m.col === move.col)) return
+      candidates.push(move)
+    }
+
+    if (wins.length >= 2) {
+      const coverage = new Map<string, number>()
+      for (const win of wins) {
+        for (const key of boxSupportCells(afterFork, win, opponent, player)) {
+          coverage.set(key, (coverage.get(key) ?? 0) + 1)
+        }
+      }
+      legal
+        .map((move) => ({ move, count: coverage.get(`${move.row},${move.col}`) ?? 0 }))
+        .filter((candidate) => candidate.count >= 1)
+        .sort((a, b) => b.count - a.count)
+        .forEach(({ move }) => addCandidate(move))
+      if (legal.some((m) => m.row === fork.row && m.col === fork.col)) {
+        addCandidate(fork)
+      }
+    } else {
+      if (legal.some((m) => m.row === fork.row && m.col === fork.col)) {
+        addCandidate(fork)
+      }
+      for (const component of threatened) {
+        for (const liberty of componentLiberties(afterFork, component, player)) {
+          addCandidate(liberty)
+        }
+      }
+    }
+
+    for (const move of candidates) {
+      const next = place(board, move, player)
+      if (winningMoves(next, opponent).length === 0 && !createsFork(next, fork, opponent, player)) {
+        return move
+      }
+    }
   }
   return null
 }
@@ -102,13 +204,6 @@ function getComponents(board: Board, color: Player): Move[][] {
   return components
 }
 
-function isCorner(row: number, col: number): boolean {
-  return (
-    (row === 0 || row === BOARD_SIZE - 1) &&
-    (col === 0 || col === BOARD_SIZE - 1)
-  )
-}
-
 function componentLiberties(board: Board, component: Move[], color: Player): Move[] {
   const seen = new Set<string>()
   const liberties: Move[] = []
@@ -128,6 +223,46 @@ function componentLiberties(board: Board, component: Move[], color: Player): Mov
   return liberties
 }
 
+function componentOpenNeighbors(board: Board, component: Move[]): Move[] {
+  const seen = new Set<string>()
+  const neighbors: Move[] = []
+  for (const cell of component) {
+    for (const [dr, dc] of DIRS) {
+      const nr = cell.row + dr
+      const nc = cell.col + dc
+      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+      if (board[nr][nc] !== null) continue
+      const key = `${nr},${nc}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      neighbors.push({ row: nr, col: nc })
+    }
+  }
+  return neighbors
+}
+
+function chainsWithSinglePlayableLiberty(
+  board: Board,
+  defender: Player,
+  attacker: Player
+): Move[][] {
+  const results: Move[][] = []
+  for (const component of getComponents(board, defender)) {
+    let playableForDefender = 0
+    let boxable = true
+    for (const cell of componentOpenNeighbors(board, component)) {
+      if (isCellPlayable(board, cell.row, cell.col, defender, false)) {
+        playableForDefender++
+      }
+      if (!isCellPlayable(board, cell.row, cell.col, attacker, false)) {
+        boxable = false
+      }
+    }
+    if (playableForDefender === 1 && boxable) results.push(component)
+  }
+  return results
+}
+
 function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move | null {
   for (const component of getComponents(board, player)) {
     const liberties = componentLiberties(board, component, player)
@@ -145,20 +280,53 @@ function boxInTilesNeeded(board: Board, color: Player): number {
   let minimum = Infinity
   for (const component of getComponents(board, opponent)) {
     const seen = new Set<string>()
-    let liberties = 0
+    const adjacent: Move[] = []
     for (const cell of component) {
       for (const [dr, dc] of DIRS) {
         const nr = cell.row + dr
         const nc = cell.col + dc
         if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-        if (board[nr][nc] !== null || isCorner(nr, nc)) continue
+        if (board[nr][nc] !== null) continue
         const key = `${nr},${nc}`
         if (seen.has(key)) continue
         seen.add(key)
-        liberties++
+        adjacent.push({ row: nr, col: nc })
       }
     }
-    minimum = Math.min(minimum, liberties)
+    if (adjacent.length === 0) continue
+
+    const flooded = new Set<string>(seen)
+    const queue: Move[] = [...adjacent]
+    let boxable = true
+    while (queue.length > 0) {
+      const current = queue.shift() as Move
+      if (
+        current.row === 0 ||
+        current.row === BOARD_SIZE - 1 ||
+        current.col === 0 ||
+        current.col === BOARD_SIZE - 1
+      ) {
+        boxable = false
+        break
+      }
+      for (const [dr, dc] of DIRS) {
+        const nr = current.row + dr
+        const nc = current.col + dc
+        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+        if (board[nr][nc] !== null) continue
+        const key = `${nr},${nc}`
+        if (flooded.has(key)) continue
+        flooded.add(key)
+        queue.push({ row: nr, col: nc })
+      }
+    }
+    if (!boxable) continue
+
+    let count = 0
+    for (const cell of adjacent) {
+      if (isCellPlayable(board, cell.row, cell.col, color, false)) count++
+    }
+    minimum = Math.min(minimum, count)
   }
   return minimum
 }
@@ -175,7 +343,7 @@ function tilesToConnect(board: Board, color: Player): number {
     const col = horizontal ? 0 : i
     const cell = board[row][col]
     if (cell === OPPONENT[color]) continue
-    if (isCorner(row, col) && cell === null) continue
+    if (cell === null && !isCellPlayable(board, row, col, color, false)) continue
     const weight = cell === color ? 0 : 1
     dist[row][col] = weight
     if (weight === 0) deque.unshift(row * BOARD_SIZE + col)
@@ -191,7 +359,7 @@ function tilesToConnect(board: Board, color: Player): number {
       const nc = col + dc
       if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
       if (board[nr][nc] === OPPONENT[color]) continue
-      if (board[nr][nc] === null && isCorner(nr, nc)) continue
+      if (board[nr][nc] === null && !isCellPlayable(board, nr, nc, color, false)) continue
       const weight = board[nr][nc] === color ? 0 : 1
       if (dist[row][col] + weight < dist[nr][nc]) {
         dist[nr][nc] = dist[row][col] + weight
@@ -211,31 +379,28 @@ function tilesToConnect(board: Board, color: Player): number {
 }
 
 function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
-  const center = Math.floor(BOARD_SIZE / 2)
+  const opponent = OPPONENT[player]
   let bestScore = Infinity
+  let bestTieBreak = Infinity
   let bestMoves: Move[] = []
   for (const move of moves) {
     const next = place(board, move, player)
     const score = Math.min(tilesToConnect(next, player), boxInTilesNeeded(next, player))
     if (score < bestScore) {
       bestScore = score
+      bestTieBreak = chainsWithSinglePlayableLiberty(next, player, opponent).length
       bestMoves = [move]
     } else if (score === bestScore) {
-      bestMoves.push(move)
+      const tieBreak = chainsWithSinglePlayableLiberty(next, player, opponent).length
+      if (tieBreak < bestTieBreak) {
+        bestTieBreak = tieBreak
+        bestMoves = [move]
+      } else if (tieBreak === bestTieBreak) {
+        bestMoves.push(move)
+      }
     }
   }
-  let bestCenter = Infinity
-  let centered: Move[] = []
-  for (const move of bestMoves) {
-    const distance = (move.row - center) ** 2 + (move.col - center) ** 2
-    if (distance < bestCenter) {
-      bestCenter = distance
-      centered = [move]
-    } else if (distance === bestCenter) {
-      centered.push(move)
-    }
-  }
-  return pickRandom(centered)
+  return pickRandom(bestMoves)
 }
 
 function pickRandom<T>(arr: T[]): T {
@@ -257,25 +422,16 @@ export function chooseMove(
   if (winning.length > 0) return winning[0]
 
   const opponent = OPPONENT[player]
-  if (winningMoves(board, opponent).length > 0) {
-    const block = findBlockingMove(board, player)
-    if (block) return block
-  }
+  const block = winningMoves(board, opponent).find((move) =>
+    moves.some((m) => m.row === move.row && m.col === move.col)
+  )
+  if (block) return block
 
   const fork = findForkMove(board, player)
   if (fork) return fork
 
-  if (hasFork(board, opponent)) {
-    const safe = moves.filter((move) => {
-      const next = place(board, move, player)
-      return winningMoves(next, opponent).length === 0 && !hasFork(next, opponent)
-    })
-    if (safe.length > 0) {
-      const defense = findLibertyDefense(board, player, safe)
-      if (defense) return defense
-      return pickBestStrategic(board, safe, player)
-    }
-  }
+  const opponentFork = findForkBlock(board, player)
+  if (opponentFork) return opponentFork
 
   const defense = findLibertyDefense(board, player, moves)
   if (defense) return defense

@@ -124,9 +124,9 @@ describe('chooseMove', () => {
   })
 
   it('blocks an opponent double-threat (Step 4)', () => {
-    // White at (2,2),(2,4),(4,2),(4,4) threatens the red pegs (2,3),(4,3);
-    // white can fork by playing (1,3), (3,3) or (5,3). Red plays (5,3) to
-    // remove every one of white\'s forking moves.
+    // White at (2,2),(2,4),(4,2),(4,4) can fork by playing (3,3), which leaves
+    // the winning moves (1,3) and (5,3) to box in the red pegs (2,3),(4,3).
+    // Red blocks the fork by playing the key intersecting space (3,3) itself.
     const board = boardWith([
       [8, 8, 'red'],
       [2, 2, 'white'],
@@ -135,7 +135,39 @@ describe('chooseMove', () => {
       [4, 4, 'white'],
     ])
     const move = chooseMove(board, 'red', { red: 1, white: 4 }, false)
-    expect(move).toEqual({ row: 5, col: 3 })
+    expect(move).toEqual({ row: 3, col: 3 })
+  })
+
+  it('blocks a fork that traps two chains at a single playable liberty (Step 4)', () => {
+    // Red's chain D3-H3 (grid 8,3..8,7) sits directly above the fixed white
+    // pegs E2 (9,4) and G2 (9,6). If red plays F2 (9,5), E2's only playable
+    // liberty is D2 and G2's is H2; E1 and G1 (grid row 10) are unplayable for
+    // white but playable for red, so red can then box one of the chains.
+    // White must defuse the fork now with F2, D2, or H2.
+    const board = boardWith([
+      [3, 1, 'white'],
+      [8, 4, 'red'],
+      [8, 6, 'red'],
+    ])
+    const move = chooseMove(board, 'white', { red: 5, white: 1 }, false)
+    expect([
+      { row: 9, col: 5 },
+      { row: 9, col: 3 },
+      { row: 9, col: 7 },
+    ]).toContainEqual(move)
+  })
+
+  it('creates a double-threat by trapping two opponent chains (Step 3)', () => {
+    // Red's chain D3-H3 (grid 8,3..8,7) sits above the fixed white pegs E2
+    // (9,4) and G2 (9,6). Playing F2 (9,5) is the critical shared-liberty
+    // cell: it leaves both chains with exactly one playable liberty (D2/H2)
+    // while E1/G1 stay unplayable for white, so red wins by boxing one.
+    const board = boardWith([
+      [8, 4, 'red'],
+      [8, 6, 'red'],
+    ])
+    const move = chooseMove(board, 'red', { red: 2, white: 0 }, false)
+    expect(move).toEqual({ row: 9, col: 5 })
   })
 
   it('defends a single-liberty chain (Step 5)', () => {
@@ -152,15 +184,17 @@ describe('chooseMove', () => {
 
   it('advances along the shortest path to victory (Step 6)', () => {
     // Column 5 is one gap from being connected top-to-bottom after (5,5) or
-    // (9,5). (5,5) is the unique move minimizing the distance that is also
-    // closest to the center, so it wins the tie-break.
+    // (9,5); both minimize the distance, so the tie-break is random.
     const board = boardWith([
       [1, 5, 'red'],
       [3, 5, 'red'],
       [7, 5, 'red'],
     ])
     const move = chooseMove(board, 'red', { red: 3, white: 0 }, false)
-    expect(move).toEqual({ row: 5, col: 5 })
+    expect([
+      { row: 5, col: 5 },
+      { row: 9, col: 5 },
+    ]).toContainEqual(move)
   })
 
   it('returns null when no legal move exists', () => {

@@ -1,5 +1,6 @@
 import { MAX_TILES, OPPONENT } from '../constants'
 import type { Board, Player } from '../types'
+import type { ParsedGame } from './boardFile'
 import {
   checkConnectionWin,
   checkSurroundWin,
@@ -23,6 +24,7 @@ export type GameAction =
   | { type: 'PLACE'; row: number; col: number }
   | { type: 'RESET' }
   | { type: 'START_AI'; human: Player }
+  | { type: 'LOAD_BOARD'; game: ParsedGame }
 
 export const initialState: GameState = createInitialState()
 
@@ -49,6 +51,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...createInitialState(),
         gameMode: 'ai',
         humanPlayer: action.human,
+      }
+
+    case 'LOAD_BOARD':
+      return {
+        ...state,
+        board: action.game.board,
+        currentPlayer: action.game.currentPlayer,
+        tilesPlaced: action.game.tilesPlaced,
+        gameOver: action.game.gameOver,
+        winner: action.game.winner,
+        alertMessage: action.game.alertMessage,
       }
 
     case 'PLACE': {

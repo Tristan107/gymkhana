@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import DevMenu from './components/DevMenu'
 import GameScreen from './components/GameScreen'
 import MenuScreen from './components/MenuScreen'
 import OnlineGameScreen from './components/OnlineGameScreen'
 import OnlineScreen from './components/OnlineScreen'
 import RulesScreen from './components/RulesScreen'
+import { boardToText, parseBoardText } from './game/boardFile'
+import type { ParseResult } from './game/boardFile'
 import { gameReducer, initialState } from './game/reducer'
 import { chooseMove } from './game/lean_ai'
 import { OPPONENT } from './constants'
@@ -17,6 +20,7 @@ function App() {
   const [onlineSession, setOnlineSession] = useState<{ code: string; myColor: Player } | null>(
     null
   )
+  const [devMenuOpen, setDevMenuOpen] = useState(false)
 
   const playerId = useMemo(() => getPlayerId(), [])
   const initialCode = useMemo(() => getRoomCodeFromUrl(), [])
@@ -60,6 +64,40 @@ function App() {
   const handleOnlineGameReady = useCallback((code: string, myColor: Player) => {
     setOnlineSession({ code, myColor })
     setScreen('game')
+  }, [])
+
+  const inLocalGame =
+    screen === 'game' &&
+    onlineSession === null &&
+    (state.gameMode === 'pvp' || state.gameMode === 'ai')
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey && event.shiftKey && event.code === 'KeyX')) return
+      if (!inLocalGame) return
+      event.preventDefault()
+      setDevMenuOpen((open) => !open)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [inLocalGame])
+
+  const handleExport = useCallback(() => {
+    const blob = new Blob([boardToText(state.board)], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'gymkhana-board.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [state.board])
+
+  const handleImportText = useCallback((text: string): ParseResult => {
+    const result = parseBoardText(text)
+    if (result.ok) dispatch({ type: 'LOAD_BOARD', game: result.game })
+    return result
   }, [])
 
   const leaveOnline = useCallback(() => {
@@ -116,6 +154,7 @@ function App() {
   }
 
   const restart = () => {
+    setDevMenuOpen(false)
     if (state.gameMode === 'ai' && state.humanPlayer !== null) {
       dispatch({ type: 'START_AI', human: state.humanPlayer })
     } else {
@@ -125,29 +164,39 @@ function App() {
 
   const goToMenu = () => {
     dispatch({ type: 'RESET' })
+    setDevMenuOpen(false)
     setScreen('menu')
   }
 
   return (
-    <GameScreen
-      currentPlayer={state.currentPlayer}
-      tilesPlaced={state.tilesPlaced}
-      gameMode={state.gameMode}
-      humanPlayer={state.humanPlayer}
-      board={state.board}
-      gameOver={state.gameOver}
-      alertMessage={state.alertMessage}
-      winner={state.winner}
-      onCellClick={(row, col) => {
-        const isHumanTurn =
-          state.gameMode !== 'ai' || state.humanPlayer === state.currentPlayer
-        if (isHumanTurn) dispatch({ type: 'PLACE', row, col })
-      }}
-      onPlayAgain={restart}
-      playAgainLabel="Play Again"
-      onMenu={goToMenu}
-      onShowRules={() => setRulesScreen(true)}
-    />
+    <>
+      <GameScreen
+        currentPlayer={state.currentPlayer}
+        tilesPlaced={state.tilesPlaced}
+        gameMode={state.gameMode}
+        humanPlayer={state.humanPlayer}
+        board={state.board}
+        gameOver={state.gameOver}
+        alertMessage={state.alertMessage}
+        winner={state.winner}
+        onCellClick={(row, col) => {
+          const isHumanTurn =
+            state.gameMode !== 'ai' || state.humanPlayer === state.currentPlayer
+          if (isHumanTurn) dispatch({ type: 'PLACE', row, col })
+        }}
+        onPlayAgain={restart}
+        playAgainLabel="Play Again"
+        onMenu={goToMenu}
+        onShowRules={() => setRulesScreen(true)}
+      />
+      {devMenuOpen && (
+        <DevMenu
+          onExport={handleExport}
+          onImportText={handleImportText}
+          onClose={() => setDevMenuOpen(false)}
+        />
+      )}
+    </>
   )
 }
 

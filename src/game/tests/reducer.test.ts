@@ -189,4 +189,29 @@ describe('gameReducer', () => {
     expect(state.currentPlayer).toBe('red')
     expect(state.tilesPlaced).toEqual({ red: 0, white: 0 })
   })
+
+  it('LOAD_BOARD restores the game while preserving mode and human player', () => {
+    const board = createBoard()
+    board[1][1] = 'red'
+    const state = gameReducer(
+      makeState({ gameMode: 'ai', humanPlayer: 'white' }),
+      {
+        type: 'LOAD_BOARD',
+        game: {
+          board,
+          tilesPlaced: { red: 1, white: 0 },
+          currentPlayer: 'white',
+          gameOver: false,
+          winner: null,
+          alertMessage: null,
+        },
+      }
+    )
+    expect(state.board[1][1]).toBe('red')
+    expect(state.currentPlayer).toBe('white')
+    expect(state.tilesPlaced).toEqual({ red: 1, white: 0 })
+    expect(state.gameOver).toBe(false)
+    expect(state.gameMode).toBe('ai')
+    expect(state.humanPlayer).toBe('white')
+  })
 })

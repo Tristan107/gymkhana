@@ -57,7 +57,8 @@ export function boardToText(board: Board): string {
         return '. '
       })
       .join('')
-    lines.push(`${String(displayRow).padStart(2)} ${cells}`.trimEnd())
+    const line = `${String(displayRow).padStart(2)} ${cells}`.trimEnd()
+    lines.push(isCorner(r, BOARD_SIZE - 1) ? `${line}  ` : line)
   }
   lines.push(`   ${COL_LABELS.split('').join(' ')}`)
   return `${lines.join('\n')}\n`

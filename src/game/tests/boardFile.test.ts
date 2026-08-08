@@ -15,11 +15,15 @@ describe('boardToText', () => {
     const lines = text.trimEnd().split('\n')
     expect(lines[0]).toBe('Turn: red')
     expect(lines[1]).toBe('')
-    expect(lines[2]).toBe('11   R . R . R . R . R')
+    expect(lines[2]).toBe('11   R . R . R . R . R  ')
     expect(lines[3]).toBe('10 W . W . W . W . W . W')
     expect(lines[4]).toBe(' 9 . R . R . R . R . R .')
-    expect(lines[12]).toBe(' 1   R . R . R . R . R')
+    expect(lines[12]).toBe(' 1   R . R . R . R . R  ')
     expect(lines[13]).toBe('   A B C D E F G H I J K')
+    const boardLines = lines.slice(2, 13)
+    for (const boardLine of boardLines) {
+      expect(boardLine.length).toBe(24)
+    }
   })
 
   it('derives the turn from tile parity', () => {

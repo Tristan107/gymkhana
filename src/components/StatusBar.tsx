@@ -36,7 +36,7 @@ function StatusBar({ currentPlayer, gameMode, humanPlayer }: StatusBarProps) {
   const timerText = `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`
 
   return (
-    <div className="box-border flex w-[448px] items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 p-3 text-sm [font-family:Arial,sans-serif]">
+    <div className="box-border flex min-h-[46px] w-[448px] items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 p-3 text-sm [font-family:Arial,sans-serif]">
       {isYourTurn && (
         <>
           <span className="font-bold" style={{ color, textShadow: glow }}>

@@ -159,12 +159,19 @@ function findForkBlock(board: Board, player: Player): Move | null {
       }
     }
 
+    let bestMove: Move | null = null
+    let bestHealth = Infinity
     for (const move of candidates) {
       const next = place(board, move, player)
       if (winningMoves(next, opponent).length === 0 && !createsFork(next, fork, opponent, player)) {
-        return move
+        const health = chainsWithSinglePlayableLiberty(next, player, opponent).length
+        if (health < bestHealth) {
+          bestHealth = health
+          bestMove = move
+        }
       }
     }
+    if (bestMove !== null) return bestMove
   }
   return null
 }
@@ -241,29 +248,55 @@ function componentOpenNeighbors(board: Board, component: Move[]): Move[] {
   return neighbors
 }
 
+function chainLibertyInfo(
+  board: Board,
+  component: Move[],
+  defender: Player,
+  attacker: Player
+): { playable: number; boxable: boolean } {
+  let playable = 0
+  let boxable = true
+  for (const cell of componentOpenNeighbors(board, component)) {
+    if (isCellPlayable(board, cell.row, cell.col, defender, false)) {
+      playable++
+    }
+    if (!isCellPlayable(board, cell.row, cell.col, attacker, false)) {
+      boxable = false
+    }
+  }
+  return { playable, boxable }
+}
+
 function chainsWithSinglePlayableLiberty(
   board: Board,
   defender: Player,
   attacker: Player
 ): Move[][] {
-  const results: Move[][] = []
-  for (const component of getComponents(board, defender)) {
-    let playableForDefender = 0
-    let boxable = true
-    for (const cell of componentOpenNeighbors(board, component)) {
-      if (isCellPlayable(board, cell.row, cell.col, defender, false)) {
-        playableForDefender++
-      }
-      if (!isCellPlayable(board, cell.row, cell.col, attacker, false)) {
-        boxable = false
-      }
+  return getComponents(board, defender).filter(
+    (component) => {
+      const info = chainLibertyInfo(board, component, defender, attacker)
+      return info.playable === 1 && info.boxable
     }
-    if (playableForDefender === 1 && boxable) results.push(component)
-  }
-  return results
+  )
+}
+
+function chainsWithFewPlayableLiberties(
+  board: Board,
+  defender: Player,
+  attacker: Player,
+  maxCount: number
+): Move[][] {
+  return getComponents(board, defender).filter(
+    (component) => {
+      const info = chainLibertyInfo(board, component, defender, attacker)
+      return info.playable <= maxCount && info.boxable
+    }
+  )
 }
 
 function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move | null {
+  const opponent = OPPONENT[player]
+
   for (const component of getComponents(board, player)) {
     const liberties = componentLiberties(board, component, player)
     if (liberties.length !== 1) continue
@@ -272,7 +305,25 @@ function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move |
       return liberty
     }
   }
-  return null
+
+  let bestMove: Move | null = null
+  let bestScore = -1
+  for (const component of chainsWithFewPlayableLiberties(board, player, opponent, 2)) {
+    for (const liberty of componentLiberties(board, component, player)) {
+      if (!moves.some((move) => move.row === liberty.row && move.col === liberty.col)) continue
+      const next = place(board, liberty, player)
+      const merged = getComponents(next, player).find((group) =>
+        group.some((cell) => cell.row === liberty.row && cell.col === liberty.col)
+      )
+      if (merged === undefined) continue
+      const score = componentLiberties(next, merged, player).length
+      if (score > bestScore) {
+        bestScore = score
+        bestMove = liberty
+      }
+    }
+  }
+  return bestMove
 }
 
 function boxInTilesNeeded(board: Board, color: Player): number {
@@ -386,16 +437,16 @@ function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
   for (const move of moves) {
     const next = place(board, move, player)
     const score = Math.min(tilesToConnect(next, player), boxInTilesNeeded(next, player))
+    const health = chainsWithFewPlayableLiberties(next, player, opponent, 2).length
     if (score < bestScore) {
       bestScore = score
-      bestTieBreak = chainsWithSinglePlayableLiberty(next, player, opponent).length
+      bestTieBreak = health
       bestMoves = [move]
     } else if (score === bestScore) {
-      const tieBreak = chainsWithSinglePlayableLiberty(next, player, opponent).length
-      if (tieBreak < bestTieBreak) {
-        bestTieBreak = tieBreak
+      if (health < bestTieBreak) {
+        bestTieBreak = health
         bestMoves = [move]
-      } else if (tieBreak === bestTieBreak) {
+      } else if (health === bestTieBreak) {
         bestMoves.push(move)
       }
     }

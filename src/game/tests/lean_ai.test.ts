@@ -182,6 +182,24 @@ describe('chooseMove', () => {
     expect(move).toEqual({ row: 0, col: 2 })
   })
 
+  it('prefers the fork-block that also rescues an endangered chain (Step 4)', () => {
+    // F3 (grid 8,5) is a fixed red peg, so white's chain E2-F2-G2 (grid 9,4..9,6)
+    // already has exactly one playable liberty: D2. Red threatens a fork by
+    // playing I3 or J2 (grid 8,8 or 9,9): either leaves the white peg I2 (9,8)
+    // with a single playable liberty as well. Occupying the fork cell (8,8)
+    // defuses the fork but strands chain E2-F2-G2, so white instead plays D2,
+    // which neutralizes the fork and grows the chain to two liberties.
+    const board = boardWith([
+      [2, 6, 'white'],
+      [9, 5, 'white'],
+      [8, 4, 'red'],
+      [8, 6, 'red'],
+      [9, 7, 'red'],
+    ])
+    const move = chooseMove(board, 'white', { red: 3, white: 2 }, false)
+    expect(move).toEqual({ row: 9, col: 3 })
+  })
+
   it('advances along the shortest path to victory (Step 6)', () => {
     // Column 5 is one gap from being connected top-to-bottom after (5,5) or
     // (9,5); both minimize the distance, so the tie-break is random.

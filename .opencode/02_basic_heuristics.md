@@ -19,9 +19,8 @@ The AI evaluates its available moves using a strict six-tier priority order:
 
 ## 2. Rules and Special Definitions
 
-### Legal Moves
-* A playable empty space is considered a **legal move** for a player if and only if it is directly adjacent (up, down, left, or right) to **at least two tokens** belonging to that player.
-* **Opening Move Exception:** On the AI's first turn of the game, it chooses randomly among all legal spaces currently available for its color.
+### Opening Move
+On the AI's first turn of the game, it chooses randomly among all legal spaces currently available for its color.
 
 ### Double-Threat (Fork) Definition
 * A double-threat occurs when a single move creates **two or more separate winning moves** for the next turn. Because the opponent can only play one token per turn, they cannot block both spaces, guaranteeing a win on the following turn.
@@ -67,6 +66,4 @@ On its turn, the AI evaluates its legal choices in this exact sequence:
 ## 4. Tie-Breaking Strategy
 
 If multiple candidate moves result in the exact same shortest path distance during strategic expansion:
-
-1. **Center Preference:** The AI prefers moves located closer to the center of the 11x11 grid (Row 6, Column 6).
-2. **Random Fallback:** If moves remain completely equal, the AI selects one uniformly at random.
+1. **Random Fallback:** If moves remain completely equal, the AI selects one uniformly at random.

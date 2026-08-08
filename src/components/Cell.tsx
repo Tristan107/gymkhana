@@ -11,6 +11,7 @@ interface CellProps {
   tilesPlaced: Record<Player, number>
   interactive: boolean
   hovered: boolean
+  isLastMove: boolean
   onClick: () => void
   onMouseEnter?: () => void
   onMouseLeave?: () => void
@@ -25,6 +26,7 @@ function Cell({
   tilesPlaced,
   interactive,
   hovered,
+  isLastMove,
   onClick,
   onMouseEnter,
   onMouseLeave,
@@ -52,6 +54,7 @@ function Cell({
         ) : (
           <div className="tile">
             <div className={`tile-rect ${value} ${getTileOrientation(board, row, col)}`} />
+            {isLastMove && <div className="last-move-dot" />}
           </div>
         )
       ) : previewVisible ? (

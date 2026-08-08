@@ -11,6 +11,7 @@ interface GameScreenProps {
   gameMode: 'pvp' | 'ai' | 'online'
   humanPlayer: Player | null
   board: BoardType
+  lastMove: { row: number; col: number } | null
   gameOver: boolean
   alertMessage: string | null
   winner: Player | null
@@ -31,6 +32,7 @@ function GameScreen({
   gameMode,
   humanPlayer,
   board,
+  lastMove,
   gameOver,
   alertMessage,
   winner,
@@ -59,6 +61,7 @@ function GameScreen({
             <Board
               board={board}
               currentPlayer={currentPlayer}
+              lastMove={lastMove}
               gameOver={gameOver}
               tilesPlaced={tilesPlaced}
               interactive={interactive}

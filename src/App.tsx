@@ -176,6 +176,7 @@ function App() {
         gameMode={state.gameMode}
         humanPlayer={state.humanPlayer}
         board={state.board}
+        lastMove={state.lastMove}
         gameOver={state.gameOver}
         alertMessage={state.alertMessage}
         winner={state.winner}

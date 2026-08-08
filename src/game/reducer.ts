@@ -9,6 +9,7 @@ export interface GameState {
   gameOver: boolean
   winner: Player | null
   tilesPlaced: Record<Player, number>
+  lastMove: { row: number; col: number } | null
   alertMessage: string | null
   gameMode: 'pvp' | 'ai' | 'online'
   humanPlayer: Player | null
@@ -29,6 +30,7 @@ function createInitialState(): GameState {
     gameOver: false,
     winner: null,
     tilesPlaced: { red: 0, white: 0 },
+    lastMove: null,
     alertMessage: null,
     gameMode: 'pvp',
     humanPlayer: null,
@@ -53,6 +55,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         board: action.game.board,
         currentPlayer: action.game.currentPlayer,
         tilesPlaced: action.game.tilesPlaced,
+        lastMove: null,
         gameOver: action.game.gameOver,
         winner: action.game.winner,
         alertMessage: action.game.alertMessage,
@@ -76,12 +79,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state.tilesPlaced,
         [player]: state.tilesPlaced[player] + 1,
       }
+      const lastMove = { row, col }
 
       if (checkConnectionWin(board, player)) {
         return {
           ...state,
           board,
           tilesPlaced,
+          lastMove,
           gameOver: true,
           winner: player,
           alertMessage: `${player.toUpperCase()} wins by Connection!`,
@@ -92,6 +97,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ...state,
           board,
           tilesPlaced,
+          lastMove,
           gameOver: true,
           winner: player,
           alertMessage: `${player.toUpperCase()} wins by Boxing-In!`,
@@ -102,6 +108,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ...state,
           board,
           tilesPlaced,
+          lastMove,
           gameOver: true,
           winner: null,
           alertMessage: "It's a draw!",
@@ -111,6 +118,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         board,
         tilesPlaced,
+        lastMove,
         currentPlayer: OPPONENT[player],
       }
     }

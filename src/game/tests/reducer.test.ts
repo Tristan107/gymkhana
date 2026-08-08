@@ -36,7 +36,20 @@ describe('gameReducer', () => {
     expect(state.board[1][1]).toBe('red')
     expect(state.tilesPlaced.red).toBe(1)
     expect(state.currentPlayer).toBe('white')
+    expect(state.lastMove).toEqual({ row: 1, col: 1 })
     expect(state.gameOver).toBe(false)
+  })
+
+  it('tracks the most recent placement as lastMove', () => {
+    const first = gameReducer(initialState, { type: 'PLACE', row: 1, col: 1 })
+    const second = gameReducer(first, { type: 'PLACE', row: 2, col: 10 })
+    expect(second.lastMove).toEqual({ row: 2, col: 10 })
+  })
+
+  it('clears lastMove on RESET', () => {
+    const placed = gameReducer(initialState, { type: 'PLACE', row: 1, col: 1 })
+    const state = gameReducer(placed, { type: 'RESET' })
+    expect(state.lastMove).toBeNull()
   })
 
   it('ignores a placement on an occupied cell', () => {
@@ -210,6 +223,7 @@ describe('gameReducer', () => {
     expect(state.board[1][1]).toBe('red')
     expect(state.currentPlayer).toBe('white')
     expect(state.tilesPlaced).toEqual({ red: 1, white: 0 })
+    expect(state.lastMove).toBeNull()
     expect(state.gameOver).toBe(false)
     expect(state.gameMode).toBe('ai')
     expect(state.humanPlayer).toBe('white')

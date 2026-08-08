@@ -121,3 +121,17 @@
   width: var(--x);
   height: 100%;
 }
+
+.last-move-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f6b252;
+  box-shadow: 0 0 0 2px #000;
+  z-index: 3;
+  pointer-events: none;
+}

@@ -1,13 +1,7 @@
 import { MAX_TILES, OPPONENT } from '../constants'
 import type { Board, Player } from '../types'
 import type { ParsedGame } from './boardFile'
-import {
-  checkConnectionWin,
-  checkSurroundWin,
-  createBoard,
-  isBoardFull,
-  isCellPlayable,
-} from './logic'
+import { checkConnectionWin, checkSurroundWin, createBoard, isCellPlayable } from './logic'
 
 export interface GameState {
   board: Board
@@ -103,7 +97,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           alertMessage: `${player.toUpperCase()} wins by Boxing-In!`,
         }
       }
-      if (isBoardFull(board) || (tilesPlaced.red === MAX_TILES && tilesPlaced.white === MAX_TILES)) {
+      if (tilesPlaced.red === MAX_TILES && tilesPlaced.white === MAX_TILES) {
         return {
           ...state,
           board,

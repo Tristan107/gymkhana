@@ -39,46 +39,6 @@ export function getTileOrientation(
   return color === 'red' ? 'vertical' : 'horizontal'
 }
 
-export function isValidConnection(
-  board: Board,
-  row: number,
-  col: number,
-  targetColor: Player
-): boolean {
-  const orientation = getTileOrientation(board, row, col, targetColor)
-
-  if (orientation === 'vertical') {
-    const topRow = row - 1
-    const bottomRow = row + 1
-    if (topRow >= 0 && bottomRow < BOARD_SIZE) {
-      return board[topRow][col] === targetColor && board[bottomRow][col] === targetColor
-    }
-  } else {
-    const leftCol = col - 1
-    const rightCol = col + 1
-    if (leftCol >= 0 && rightCol < BOARD_SIZE) {
-      return board[row][leftCol] === targetColor && board[row][rightCol] === targetColor
-    }
-  }
-  return false
-}
-
-export function isForbiddenEdgePlacement(
-  board: Board,
-  row: number,
-  col: number,
-  targetColor: Player
-): boolean {
-  const orientation = getTileOrientation(board, row, col, targetColor)
-
-  if (orientation === 'vertical') {
-    if (row === 0 || row === BOARD_SIZE - 1) return true
-  } else {
-    if (col === 0 || col === BOARD_SIZE - 1) return true
-  }
-  return false
-}
-
 export function isCellPlayable(
   board: Board,
   row: number,
@@ -86,14 +46,9 @@ export function isCellPlayable(
   player: Player,
   gameOver: boolean
 ): boolean {
-  const isCorner =
-    (row === 0 || row === BOARD_SIZE - 1) && (col === 0 || col === BOARD_SIZE - 1)
-  return (
-    !gameOver &&
-    !isCorner &&
-    isValidConnection(board, row, col, player) &&
-    !isForbiddenEdgePlacement(board, row, col, player)
-  )
+  if (gameOver || board[row][col] !== null) return false
+  if (player === 'red') return col !== 0 && col !== BOARD_SIZE - 1
+  return row !== 0 && row !== BOARD_SIZE - 1
 }
 
 export function checkConnectionWin(board: Board, player: Player): boolean {
@@ -218,13 +173,4 @@ export function checkSurroundWin(board: Board, player: Player): boolean {
     }
   }
   return false
-}
-
-export function isBoardFull(board: Board): boolean {
-  for (let r = 1; r < BOARD_SIZE - 1; r++) {
-    for (let c = 1; c < BOARD_SIZE - 1; c++) {
-      if (board[r][c] === null) return false
-    }
-  }
-  return true
 }

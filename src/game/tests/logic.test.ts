@@ -6,11 +6,8 @@ import {
   checkSurroundWin,
   createBoard,
   getTileOrientation,
-  isBoardFull,
   isCellPlayable,
   isFixedPeg,
-  isForbiddenEdgePlacement,
-  isValidConnection,
 } from '../logic'
 
 type Override = [row: number, col: number, value: CellValue]
@@ -97,37 +94,6 @@ describe('getTileOrientation', () => {
   })
 })
 
-describe('isValidConnection', () => {
-  it('allows a placement between two same-color tokens on a straight line', () => {
-    const board = createBoard()
-    expect(isValidConnection(board, 0, 2, 'red')).toBe(true)
-    expect(isValidConnection(board, 1, 1, 'red')).toBe(true)
-    expect(isValidConnection(board, 1, 1, 'white')).toBe(true)
-  })
-
-  it('rejects placements without two same-color tokens in a straight line', () => {
-    const board = createBoard()
-    expect(isValidConnection(board, 0, 2, 'white')).toBe(false)
-    expect(isValidConnection(board, 2, 0, 'red')).toBe(false)
-  })
-})
-
-describe('isForbiddenEdgePlacement', () => {
-  it('forbids vertical placements on the top row', () => {
-    expect(isForbiddenEdgePlacement(createBoard(), 0, 1, 'red')).toBe(true)
-  })
-
-  it('forbids horizontal placements on the left column', () => {
-    expect(isForbiddenEdgePlacement(createBoard(), 1, 0, 'white')).toBe(true)
-  })
-
-  it('allows placements away from the border', () => {
-    const board = createBoard()
-    expect(isForbiddenEdgePlacement(board, 1, 1, 'red')).toBe(false)
-    expect(isForbiddenEdgePlacement(board, 1, 1, 'white')).toBe(false)
-  })
-})
-
 describe('isCellPlayable', () => {
   it('accepts a valid non-edge placement', () => {
     expect(isCellPlayable(createBoard(), 1, 1, 'red', false)).toBe(true)
@@ -139,8 +105,14 @@ describe('isCellPlayable', () => {
     expect(isCellPlayable(createBoard(), 10, 10, 'white', false)).toBe(false)
   })
 
-  it('rejects cells without a valid connection', () => {
+  it('rejects red placements on columns A and K', () => {
     expect(isCellPlayable(createBoard(), 2, 0, 'red', false)).toBe(false)
+    expect(isCellPlayable(createBoard(), 2, 10, 'red', false)).toBe(false)
+  })
+
+  it('rejects white placements on rows 1 and 11', () => {
+    expect(isCellPlayable(createBoard(), 0, 2, 'white', false)).toBe(false)
+    expect(isCellPlayable(createBoard(), 10, 2, 'white', false)).toBe(false)
   })
 
   it('rejects everything once the game is over', () => {
@@ -339,45 +311,5 @@ describe('checkSurroundWin', () => {
       [2, 3, 'red'],
     ])
     expect(checkSurroundWin(board, 'red')).toBe(false)
-  })
-})
-
-describe('isBoardFull', () => {
-  it('is false while any interior cell is empty', () => {
-    const board = createBoard()
-    expect(isBoardFull(board)).toBe(false)
-  })
-
-  it('is true when every interior cell is occupied', () => {
-    const board = createBoard()
-    for (let r = 1; r < 10; r++) {
-      for (let c = 1; c < 10; c++) {
-        if (board[r][c] === null) board[r][c] = 'red'
-      }
-    }
-    expect(isBoardFull(board)).toBe(true)
-  })
-
-  it('ignores the unplayable border ring', () => {
-    const board = createBoard()
-    for (let r = 1; r < 10; r++) {
-      for (let c = 1; c < 10; c++) {
-        if (board[r][c] === null) board[r][c] = 'white'
-      }
-    }
-    expect(board[0][0]).toBeNull()
-    expect(board[0][2]).toBeNull()
-    expect(board[2][0]).toBeNull()
-    expect(isBoardFull(board)).toBe(true)
-  })
-
-  it('is false when a single interior cell is empty', () => {
-    const board = createBoard()
-    for (let r = 1; r < 10; r++) {
-      for (let c = 1; c < 10; c++) {
-        if (board[r][c] === null && !(r === 5 && c === 5)) board[r][c] = 'white'
-      }
-    }
-    expect(isBoardFull(board)).toBe(false)
   })
 })

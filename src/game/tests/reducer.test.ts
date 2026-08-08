@@ -56,14 +56,14 @@ describe('gameReducer', () => {
     expect(next).toBe(state)
   })
 
-  it('rejects a placement with no valid connection', () => {
+  it('rejects a red placement on column A', () => {
     const state = gameReducer(initialState, { type: 'PLACE', row: 2, col: 0 })
     expect(state).toBe(initialState)
     expect(state.board[2][0]).toBeNull()
     expect(state.currentPlayer).toBe('red')
   })
 
-  it('rejects an invalid white placement', () => {
+  it('rejects a white placement on row 11', () => {
     const afterRed = gameReducer(initialState, { type: 'PLACE', row: 1, col: 1 })
     const state = gameReducer(afterRed, { type: 'PLACE', row: 0, col: 2 })
     expect(state).toBe(afterRed)

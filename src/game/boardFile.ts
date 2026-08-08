@@ -1,6 +1,6 @@
 import { BOARD_SIZE, MAX_TILES } from '../constants'
 import type { Board, Player } from '../types'
-import { checkConnectionWin, checkSurroundWin, isBoardFull } from './logic'
+import { checkConnectionWin, checkSurroundWin } from './logic'
 
 export interface ParsedGame {
   board: Board
@@ -188,7 +188,7 @@ export function parseBoardText(text: string): ParseResult {
     gameOver = true
     winner = 'white'
     alertMessage = `WHITE wins by ${whiteConnection ? 'Connection' : 'Boxing-In'}!`
-  } else if (isBoardFull(board) || (placed.red === MAX_TILES && placed.white === MAX_TILES)) {
+  } else if (placed.red === MAX_TILES && placed.white === MAX_TILES) {
     gameOver = true
     alertMessage = "It's a draw!"
   }

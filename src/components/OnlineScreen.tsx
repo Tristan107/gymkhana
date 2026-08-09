@@ -21,11 +21,22 @@ const GHOST_BUTTON =
   'cursor-pointer rounded-md border border-white/20 bg-transparent px-5 py-2 text-[13px] font-bold text-[#ccc] transition-colors duration-200 hover:bg-white/5 [font-family:Arial,sans-serif]'
 const GOLD_BUTTON =
   'cursor-pointer rounded-md border-none bg-[#f6b252] px-5 py-3 text-[15px] font-bold text-[#1a1a1a] transition-colors duration-200 active:scale-[0.98] hover:brightness-110 [font-family:Arial,sans-serif]'
+const INPUT =
+  'rounded-md border border-white/20 bg-transparent px-3 py-2.5 text-center text-sm font-bold text-[#fdfaf2] [font-family:Arial,sans-serif] placeholder:text-[#666] focus:border-[#f6b252] focus:outline-none'
+
+const DEFAULT_PSEUDO: Record<Player, string> = {
+  red: 'Red',
+  white: 'White',
+}
+
+const challengeTitle = (pseudo: string): string =>
+  `${pseudo} has challenged you to a game of Gymkhana !`
 
 function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenProps) {
   const [phase, setPhase] = useState<Phase>({ kind: 'form' })
   const [mode, setMode] = useState<'create' | 'join' | null>(null)
   const [joinCode, setJoinCode] = useState('')
+  const [pseudo, setPseudo] = useState('Red')
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -83,6 +94,10 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
     async (color: Player) => {
       setError(null)
       setMode(null)
+      setPseudo((current) => {
+        const trimmed = current.trim()
+        return trimmed === '' ? DEFAULT_PSEUDO[color] : current
+      })
       setPhase({ kind: 'busy', message: 'Creating game…' })
       try {
         const code = await createRoom(myId, color)
@@ -120,14 +135,26 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
 
   const handleCopy = useCallback(async () => {
     if (phase.kind !== 'waiting') return
+    const url = getShareUrl(phase.code)
+    const title = challengeTitle(pseudo.trim() || DEFAULT_PSEUDO[phase.myColor])
+    const text = `${title}\n${url}`
     try {
-      await navigator.clipboard.writeText(getShareUrl(phase.code))
+      if (typeof ClipboardItem !== 'undefined') {
+        const html = `<a href="${url}">${title}</a>`
+        const item = new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        })
+        await navigator.clipboard.write([item])
+      } else {
+        await navigator.clipboard.writeText(text)
+      }
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
       setError('Automatic copy failed. Copy the link below manually.')
     }
-  }, [phase])
+  }, [phase, pseudo])
 
   return (
     <div className="box-border flex min-h-screen flex-col items-center justify-center gap-8 p-5">
@@ -172,6 +199,20 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
 
           {mode === 'create' && (
             <div className="flex flex-col items-center gap-3 rounded-md border border-white/10 bg-white/5 p-4">
+              <label className="flex w-full flex-col gap-1.5">
+                <span className="m-0 text-xs font-bold text-[#f6b252] [font-family:Arial,sans-serif]">
+                  Your name
+                </span>
+                <input
+                  type="text"
+                  value={pseudo}
+                  onChange={(event) => setPseudo(event.target.value)}
+                  maxLength={24}
+                  spellCheck={false}
+                  placeholder="Red"
+                  className={INPUT}
+                />
+              </label>
               <p className="m-0 text-sm font-bold text-[#f6b252] [font-family:Arial,sans-serif]">
                 Choose your color
               </p>
@@ -181,13 +222,19 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => void handleCreate('red')}
+                  onClick={() => {
+                    setPseudo((current) => (current === 'White' ? 'Red' : current))
+                    void handleCreate('red')
+                  }}
                   aria-label="Create game as Red"
                   className="h-10 w-10 cursor-pointer rounded-md border-none bg-[#ff3344] transition-colors duration-200 active:scale-[0.95] hover:brightness-110"
                 />
                 <button
                   type="button"
-                  onClick={() => void handleCreate('white')}
+                  onClick={() => {
+                    setPseudo((current) => (current === 'Red' ? 'White' : current))
+                    void handleCreate('white')
+                  }}
                   aria-label="Create game as White"
                   className="h-10 w-10 cursor-pointer rounded-md border-none bg-[#e0e0e0] transition-colors duration-200 active:scale-[0.95] hover:bg-[#c9c9c9]"
                 />

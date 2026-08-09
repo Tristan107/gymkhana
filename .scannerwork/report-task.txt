@@ -1,0 +1,6 @@
+projectKey=Gymkhaha
+serverUrl=http://localhost:9000
+serverVersion=26.8.0.126808
+dashboardUrl=http://localhost:9000/dashboard?id=Gymkhaha
+ceTaskId=7d1a0c9a-f82b-4ab3-84a0-18ddeceee36d
+ceTaskUrl=http://localhost:9000/api/ce/task?id=7d1a0c9a-f82b-4ab3-84a0-18ddeceee36d

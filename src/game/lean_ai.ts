@@ -429,25 +429,81 @@ function tilesToConnect(board: Board, color: Player): number {
   return minimum
 }
 
+function onHomeLane(move: Move, player: Player): boolean {
+  return player === 'red'
+    ? move.row === 0 || move.row === BOARD_SIZE - 1
+    : move.col === 0 || move.col === BOARD_SIZE - 1
+}
+
+function isImminentBoxLiberty(board: Board, move: Move, player: Player): boolean {
+  const opponent = OPPONENT[player]
+  for (const component of getComponents(board, opponent)) {
+    const info = chainLibertyInfo(board, component, opponent, player)
+    if (info.playable > 2 || !info.boxable) continue
+    if (componentLiberties(board, component, opponent).some((l) => l.row === move.row && l.col === move.col)) {
+      return true
+    }
+  }
+  return false
+}
+
+function axisAdjacency(board: Board, player: Player): number {
+  let count = 0
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (board[r][c] !== player) continue
+      if (player === 'red') {
+        if (r + 1 < BOARD_SIZE && board[r + 1][c] === player) count++
+      } else if (c + 1 < BOARD_SIZE && board[r][c + 1] === player) {
+        count++
+      }
+    }
+  }
+  return count
+}
+
 function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
   const opponent = OPPONENT[player]
-  let bestScore = Infinity
-  let bestTieBreak = Infinity
+  const candidates = moves.filter(
+    (move) => !onHomeLane(move, player) || isImminentBoxLiberty(board, move, player)
+  )
+  const pool = candidates.length > 0 ? candidates : moves
+  let bestConnect = Infinity
+  let bestZigzag = Infinity
+  let bestHealth = Infinity
+  let bestBox = Infinity
   let bestMoves: Move[] = []
-  for (const move of moves) {
+  for (const move of pool) {
     const next = place(board, move, player)
-    const score = Math.min(tilesToConnect(next, player), boxInTilesNeeded(next, player))
+    const connect = tilesToConnect(next, player)
+    const zigzag = axisAdjacency(next, player)
     const health = chainsWithFewPlayableLiberties(next, player, opponent, 2).length
-    if (score < bestScore) {
-      bestScore = score
-      bestTieBreak = health
+    const box = boxInTilesNeeded(next, player)
+    if (connect < bestConnect) {
+      bestConnect = connect
+      bestZigzag = zigzag
+      bestHealth = health
+      bestBox = box
       bestMoves = [move]
-    } else if (score === bestScore) {
-      if (health < bestTieBreak) {
-        bestTieBreak = health
+    } else if (connect === bestConnect) {
+      if (zigzag < bestZigzag) {
+        bestZigzag = zigzag
+        bestHealth = health
+        bestBox = box
         bestMoves = [move]
-      } else if (health === bestTieBreak) {
-        bestMoves.push(move)
+      } else if (zigzag === bestZigzag) {
+        if (health < bestHealth) {
+          bestHealth = health
+          bestBox = box
+          bestMoves = [move]
+        } else if (health === bestHealth) {
+          if (box < bestBox) {
+            bestBox = box
+            bestMoves = [move]
+          } else if (box === bestBox) {
+            bestMoves.push(move)
+          }
+        }
       }
     }
   }
@@ -467,7 +523,10 @@ export function chooseMove(
   const moves = getValidMoves(board, player, gameOver)
   if (moves.length === 0) return null
 
-  if (tilesPlaced[player] === 0) return pickRandom(moves)
+  if (tilesPlaced[player] === 0) {
+    const opening = moves.filter((move) => !onHomeLane(move, player))
+    return pickRandom(opening.length > 0 ? opening : moves)
+  }
 
   const winning = winningMoves(board, player)
   if (winning.length > 0) return winning[0]

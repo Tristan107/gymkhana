@@ -83,15 +83,7 @@ function App() {
   }, [inLocalGame])
 
   const handleExport = useCallback(() => {
-    const blob = new Blob([boardToText(state.board)], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'gymkhana-board.txt'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    void navigator.clipboard.writeText(boardToText(state.board))
   }, [state.board])
 
   const handleImportText = useCallback((text: string): ParseResult => {

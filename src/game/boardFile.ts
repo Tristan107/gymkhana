@@ -81,6 +81,8 @@ export function parseBoardText(text: string): ParseResult {
     const line = rawLine.trim()
     if (line === '') continue
 
+    if (/^accepte?d\s*solutions/i.test(line)) continue
+
     const turnMatch = line.match(/^turn\s*:\s*(red|white)$/i)
     if (turnMatch !== null) {
       declaredTurn = turnMatch[1].toLowerCase() as Player

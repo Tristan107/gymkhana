@@ -12,3 +12,5 @@ Turn: white
  2 W . W . W . W . W . W
  1   R . R . R . R . R  
    A B C D E F G H I J K
+
+Accepted solutions : D2, F2, H2

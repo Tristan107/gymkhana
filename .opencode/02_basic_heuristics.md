@@ -10,6 +10,8 @@ The AI evaluates its available moves using a strict six-tier priority order:
 
 1. **Immediate Win (Offense):** Play a move that wins the game immediately.
 2. **Immediate Block (Defense):** Block the opponent from winning on their next turn.
+2.b ** Forced win near the edge:** Play a move that wins the game by partial box-in near the edge (no escape)
+2.c ** Defend forced win near the edge:** Block the opponent to play a move that wins the game by partial box-in near the edge (no escape)
 3. **Create a Double-Threat (Offense):** Set up a position from which the opponent cannot avoid a forced win.
 4. **Block an Opponent Double-Threat (Defense):** Prevent the opponent from setting up a forced win.
 5. **Defend Single-Liberty Chains (Defense):** Save any friendly token or chain that only has one remaining playable liberty.
@@ -26,12 +28,9 @@ On the AI's first turn of the game, it chooses randomly among all legal spaces c
 A chain's safety must be evaluated only through **playable liberties** — never through the raw number of adjacent empty cells.
 
 * **Playable liberty:** an adjacent empty cell that the chain's own color **may legally occupy** (White may not play row 1 or row 11; Red may not play column A or column K).
-* **Open neighbor:** any adjacent empty cell, **including cells on the chain's own forbidden lines**. A cell on the opponent's forbidden line is a *latent box point*: the opponent can fill it to complete a box, but the chain can never defend through it.
-* **Boxability:** a chain can only be boxed by the opponent if every one of its open neighbors can be occupied by the opponent. Because the four corners are never playable by either side, a chain adjacent to a corner can never be boxed (that corner always counts as an escape).
 
 **Safety rules:**
 * Keep every own chain at **two or more playable liberties**. A chain with exactly one playable liberty is in immediate danger; a chain with zero playable liberties is effectively dead.
-* Never count a forbidden-line open neighbor (e.g., row 1/row 11 for White, column A/K for Red) as a defensive resource. It is only a resource for the opponent.
 
 ### Double-Threat (Fork) Definition
 A double-threat (fork) is a move by one player that forces a win. It comes in two forms:

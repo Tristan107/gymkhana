@@ -58,6 +58,16 @@ function findForkMove(board: Board, player: Player): Move | null {
   return null
 }
 
+function findForcedWinMove(board: Board, player: Player): Move | null {
+  const opponent = OPPONENT[player]
+  for (const move of getValidMoves(board, player, false)) {
+    const after = place(board, move, player)
+    if (chainsWithFewPlayableLiberties(after, opponent, player, 0).length === 0) continue
+    if (winningMoves(after, opponent).length === 0) return move
+  }
+  return null
+}
+
 function createsFork(board: Board, move: Move, attacker: Player, defender: Player): boolean {
   if (board[move.row][move.col] !== null) return false
   const after = place(board, move, attacker)
@@ -536,6 +546,9 @@ export function chooseMove(
     moves.some((m) => m.row === move.row && m.col === move.col)
   )
   if (block) return block
+
+  const forcedWin = findForcedWinMove(board, player)
+  if (forcedWin) return forcedWin
 
   const fork = findForkMove(board, player)
   if (fork) return fork

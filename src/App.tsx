@@ -21,6 +21,7 @@ function App() {
     null
   )
   const [devMenuOpen, setDevMenuOpen] = useState(false)
+  const [showCoordinates, setShowCoordinates] = useState(false)
 
   const playerId = useMemo(() => getPlayerId(), [])
   const initialCode = useMemo(() => getRoomCodeFromUrl(), [])
@@ -182,12 +183,15 @@ function App() {
         onUndo={state.gameMode === 'ai' ? () => dispatch({ type: 'UNDO' }) : undefined}
         onMenu={goToMenu}
         onShowRules={() => setRulesScreen(true)}
+        showCoordinates={showCoordinates}
       />
       {devMenuOpen && (
         <DevMenu
           onExport={handleExport}
           onImportText={handleImportText}
           onClose={() => setDevMenuOpen(false)}
+          showCoordinates={showCoordinates}
+          onToggleCoordinates={() => setShowCoordinates((value) => !value)}
         />
       )}
     </>

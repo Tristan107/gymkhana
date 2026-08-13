@@ -25,6 +25,7 @@ interface GameScreenProps {
   onMenu: () => void
   onShowRules: () => void
   interactive?: boolean
+  showCoordinates?: boolean
 }
 
 function GameScreen({
@@ -47,6 +48,7 @@ function GameScreen({
   onMenu,
   onShowRules,
   interactive = true,
+  showCoordinates = false,
 }: GameScreenProps) {
   return (
     <div className="flex min-h-screen flex-col items-center p-5 box-border">
@@ -67,6 +69,7 @@ function GameScreen({
               gameOver={gameOver}
               tilesPlaced={tilesPlaced}
               interactive={interactive}
+              showCoordinates={showCoordinates}
               onCellClick={onCellClick}
             />
             <GameOverOverlay

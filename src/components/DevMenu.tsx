@@ -5,12 +5,14 @@ interface DevMenuProps {
   onExport: () => void
   onImportText: (text: string) => ParseResult
   onClose: () => void
+  showCoordinates: boolean
+  onToggleCoordinates: () => void
 }
 
 const buttonBase =
   'cursor-pointer rounded-md px-5 py-2.5 text-[13px] font-bold transition-colors duration-200 active:scale-[0.98] [font-family:Arial,sans-serif]'
 
-function DevMenu({ onExport, onImportText, onClose }: DevMenuProps) {
+function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoordinates }: DevMenuProps) {
   const [pasteText, setPasteText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -39,6 +41,15 @@ function DevMenu({ onExport, onImportText, onClose }: DevMenuProps) {
           Developer Menu
         </h2>
         <div className="flex flex-col gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-[13px] font-bold text-[#ddd]">
+            <input
+              type="checkbox"
+              checked={showCoordinates}
+              onChange={onToggleCoordinates}
+              className="h-4 w-4 cursor-pointer accent-[#f6b252]"
+            />
+            Show coordinates
+          </label>
           <button
             type="button"
             onClick={handleExport}

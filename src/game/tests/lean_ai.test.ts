@@ -215,6 +215,27 @@ describe('chooseMove', () => {
     ]).toContainEqual(move)
   })
 
+  it('cuts the opponent path while progressing to victory (Step 6)', () => {
+    // White's only cheap horizontal path runs through (5,5): playing (5,5)
+    // raises white's connection distance while (9,5) leaves it unchanged, so
+    // the tie-break favors (5,5) — the move that both advances red's column
+    // and blocks white's line. The red tokens near the edges (3,1),(3,9),
+    // (7,1),(7,9) just merge the corner chains so Step 5 does not fire.
+    const board = boardWith([
+      [1, 5, 'red'],
+      [3, 5, 'red'],
+      [7, 5, 'red'],
+      [3, 1, 'red'],
+      [3, 9, 'red'],
+      [7, 1, 'red'],
+      [7, 9, 'red'],
+      [5, 3, 'white'],
+      [5, 7, 'white'],
+    ])
+    const move = chooseMove(board, 'red', { red: 7, white: 2 }, false)
+    expect(move).toEqual({ row: 5, col: 5 })
+  })
+
   it('returns null when no legal move exists', () => {
     const board = createBoard()
     for (let r = 0; r < 11; r++) {

@@ -15,7 +15,7 @@ The AI evaluates its available moves using a strict six-tier priority order:
 3. **Create a Double-Threat (Offense):** Set up a position from which the opponent cannot avoid a forced win.
 4. **Block an Opponent Double-Threat (Defense):** Prevent the opponent from setting up a forced win.
 5. **Defend Single-Liberty Chains (Defense):** Save any friendly token or chain that only has one remaining playable liberty.
-6. **Strategic Path Expansion (Development):** Advance toward either a connection win or an encirclement ("box-in") win, choosing the shortest path to victory, then favoring moves that keep every own chain healthy.
+6. **Strategic Path Expansion (Development):** Advance toward either a connection win or an encirclement ("box-in") win, choosing the shortest path to victory, then favoring moves that also cut the opponent's path (block their shortest connection line) while keeping every own chain healthy.
 
 ---
 
@@ -80,8 +80,9 @@ On its turn, the AI evaluates its legal choices in this exact sequence:
 * If none of the higher priorities apply, the AI chooses a move that advances the **connection** objective — the space that reduces the total number of additional tiles needed to complete the top-bottom (Red) or left-right (White) path. Box-in progress is *not* chased here: forks and box-in opportunities arise naturally from connecting.
 * **Home-lane cells** (row 1/row 11 for Red, column A/column K for White) are excluded from consideration unless they are the **last liberties of a boxable opponent group** (a chain with two or fewer playable liberties whose remaining open neighbors are all attacker-occupiable, so it cannot extend). If every legal move is a home-lane cell, the AI falls back to them.
 * **Zigzag preference:** among moves with the same connection distance, prefer the move that leaves the fewest own-token adjacencies aligned with the travel axis (vertical runs for Red, horizontal runs for White). A straight column of N tiles has N-1 such edges while a zigzag staircase has only about half, so minimizing them demotes straight ladders and produces a weaving path that creates more forks and box-ins.
-* **Health tie-break:** among moves equal on connection distance and zigzag score, prefer the move that leaves the fewest of the AI's own chains with exactly one playable liberty (ideally zero). This pre-empts form-2 forks before Step 4 can even be reached.
-* **Box-in as last tie-break:** only when connection distance, zigzag score, and health all tie does the AI consider box-in progress.
+* **Opponent path block (dual-purpose):** among moves with the same connection distance, first prefer the move that maximizes the opponent's connection distance (the number of tiles they still need to connect their home lines). Placing on a cell that lies on the opponent's shortest path cuts their line while advancing your own, so every strategic move both attacks and defends.
+* **Health tie-break:** among moves equal on connection distance and opponent-path-block score, prefer the move that leaves the fewest of the AI's own chains with exactly one playable liberty (ideally zero). This pre-empts form-2 forks before Step 4 can even be reached.
+* **Box-in as last tie-break:** only when connection distance, opponent-path-block score, zigzag score, and health all tie does the AI consider box-in progress.
 
 ---
 
@@ -99,10 +100,11 @@ Regardless of which step selects the move, run this mechanical checklist on the 
 ## 5. Tie-Breaking Strategy
 
 If multiple candidate moves result in the exact same connection distance during strategic expansion:
-1. **Zigzag:** Prefer the move that leaves the fewest own-token adjacencies along the travel axis (straight ladders are demoted in favor of a weaving path).
-2. **Chain Health:** Prefer the move that minimizes the number of the AI's own chains left with exactly one playable liberty.
-3. **Box-in Progress:** Prefer the move that reduces the tiles needed to complete a box-in (used only as a final tie-break; boxes are otherwise expected to emerge naturally).
-4. **Random Fallback:** If moves remain completely equal, the AI selects one uniformly at random.
+1. **Opponent Path Block:** Prefer the move that maximizes the opponent's connection distance (cuts their shortest line), making each move both attack and defense.
+2. **Zigzag:** Prefer the move that leaves the fewest own-token adjacencies along the travel axis (straight ladders are demoted in favor of a weaving path).
+3. **Chain Health:** Prefer the move that minimizes the number of the AI's own chains left with exactly one playable liberty.
+4. **Box-in Progress:** Prefer the move that reduces the tiles needed to complete a box-in (used only as a final tie-break; boxes are otherwise expected to emerge naturally).
+5. **Random Fallback:** If moves remain completely equal, the AI selects one uniformly at random.
 
 ---
 

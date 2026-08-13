@@ -479,6 +479,7 @@ function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
   )
   const pool = candidates.length > 0 ? candidates : moves
   let bestConnect = Infinity
+  let bestOppConnect = -Infinity
   let bestZigzag = Infinity
   let bestHealth = Infinity
   let bestBox = Infinity
@@ -486,32 +487,42 @@ function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
   for (const move of pool) {
     const next = place(board, move, player)
     const connect = tilesToConnect(next, player)
+    const oppConnect = tilesToConnect(next, opponent)
     const zigzag = axisAdjacency(next, player)
     const health = chainsWithFewPlayableLiberties(next, player, opponent, 2).length
     const box = boxInTilesNeeded(next, player)
     if (connect < bestConnect) {
       bestConnect = connect
+      bestOppConnect = oppConnect
       bestZigzag = zigzag
       bestHealth = health
       bestBox = box
       bestMoves = [move]
     } else if (connect === bestConnect) {
-      if (zigzag < bestZigzag) {
+      if (oppConnect > bestOppConnect) {
+        bestOppConnect = oppConnect
         bestZigzag = zigzag
         bestHealth = health
         bestBox = box
         bestMoves = [move]
-      } else if (zigzag === bestZigzag) {
-        if (health < bestHealth) {
+      } else if (oppConnect === bestOppConnect) {
+        if (zigzag < bestZigzag) {
+          bestZigzag = zigzag
           bestHealth = health
           bestBox = box
           bestMoves = [move]
-        } else if (health === bestHealth) {
-          if (box < bestBox) {
+        } else if (zigzag === bestZigzag) {
+          if (health < bestHealth) {
+            bestHealth = health
             bestBox = box
             bestMoves = [move]
-          } else if (box === bestBox) {
-            bestMoves.push(move)
+          } else if (health === bestHealth) {
+            if (box < bestBox) {
+              bestBox = box
+              bestMoves = [move]
+            } else if (box === bestBox) {
+              bestMoves.push(move)
+            }
           }
         }
       }

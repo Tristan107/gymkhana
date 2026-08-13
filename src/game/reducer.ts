@@ -3,6 +3,12 @@ import type { Board, Player } from '../types'
 import type { ParsedGame } from './boardFile'
 import { checkConnectionWin, checkSurroundWin, createBoard, isCellPlayable } from './logic'
 
+export interface MoveRecord {
+  player: Player
+  row: number
+  col: number
+}
+
 export interface GameState {
   board: Board
   currentPlayer: Player
@@ -13,6 +19,7 @@ export interface GameState {
   alertMessage: string | null
   gameMode: 'pvp' | 'ai' | 'online'
   humanPlayer: Player | null
+  moveHistory: MoveRecord[]
 }
 
 export type GameAction =
@@ -20,6 +27,7 @@ export type GameAction =
   | { type: 'RESET' }
   | { type: 'START_AI'; human: Player }
   | { type: 'LOAD_BOARD'; game: ParsedGame }
+  | { type: 'UNDO' }
 
 export const initialState: GameState = createInitialState()
 
@@ -34,6 +42,7 @@ function createInitialState(): GameState {
     alertMessage: null,
     gameMode: 'pvp',
     humanPlayer: null,
+    moveHistory: [],
   }
 }
 
@@ -59,6 +68,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         gameOver: action.game.gameOver,
         winner: action.game.winner,
         alertMessage: action.game.alertMessage,
+        moveHistory: [],
       }
 
     case 'PLACE': {
@@ -80,6 +90,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         [player]: state.tilesPlaced[player] + 1,
       }
       const lastMove = { row, col }
+      const moveHistory = [...state.moveHistory, { player, row, col }]
 
       if (checkConnectionWin(board, player)) {
         return {
@@ -87,6 +98,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           board,
           tilesPlaced,
           lastMove,
+          moveHistory,
           gameOver: true,
           winner: player,
           alertMessage: `${player.toUpperCase()} wins by Connection!`,
@@ -98,6 +110,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           board,
           tilesPlaced,
           lastMove,
+          moveHistory,
           gameOver: true,
           winner: player,
           alertMessage: `${player.toUpperCase()} wins by Boxing-In!`,
@@ -109,6 +122,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           board,
           tilesPlaced,
           lastMove,
+          moveHistory,
           gameOver: true,
           winner: null,
           alertMessage: "It's a draw!",
@@ -119,7 +133,54 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         board,
         tilesPlaced,
         lastMove,
+        moveHistory,
         currentPlayer: OPPONENT[player],
+      }
+    }
+
+    case 'UNDO': {
+      if (
+        state.gameMode !== 'ai' ||
+        state.humanPlayer === null ||
+        state.moveHistory.length === 0
+      ) {
+        return state
+      }
+
+      const aiPlayer = OPPONENT[state.humanPlayer]
+      const removed = new Set<number>()
+      let aiFound = false
+      let humanFound = false
+      for (let i = state.moveHistory.length - 1; i >= 0; i--) {
+        const move = state.moveHistory[i]
+        if (move.player === aiPlayer && !aiFound) {
+          removed.add(i)
+          aiFound = true
+        } else if (move.player === state.humanPlayer && !humanFound) {
+          removed.add(i)
+          humanFound = true
+        }
+        if (aiFound && humanFound) break
+      }
+
+      const moveHistory = state.moveHistory.filter((_, i) => !removed.has(i))
+      const board = createBoard()
+      const tilesPlaced: Record<Player, number> = { red: 0, white: 0 }
+      for (const move of moveHistory) {
+        board[move.row][move.col] = move.player
+        tilesPlaced[move.player]++
+      }
+
+      return {
+        ...state,
+        board,
+        tilesPlaced,
+        currentPlayer: state.humanPlayer,
+        gameOver: false,
+        winner: null,
+        lastMove: moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null,
+        alertMessage: null,
+        moveHistory,
       }
     }
 

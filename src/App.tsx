@@ -179,6 +179,7 @@ function App() {
         }}
         onPlayAgain={restart}
         playAgainLabel="Play Again"
+        onUndo={state.gameMode === 'ai' ? () => dispatch({ type: 'UNDO' }) : undefined}
         onMenu={goToMenu}
         onShowRules={() => setRulesScreen(true)}
       />

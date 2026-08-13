@@ -18,6 +18,7 @@ interface GameScreenProps {
   onCellClick: (row: number, col: number) => void
   onPlayAgain: () => void
   playAgainLabel: string
+  onUndo?: () => void
   overlayPlayAgain?: boolean
   onRematch?: () => void
   rematchLabel?: string
@@ -39,6 +40,7 @@ function GameScreen({
   onCellClick,
   onPlayAgain,
   playAgainLabel,
+  onUndo,
   overlayPlayAgain = true,
   onRematch,
   rematchLabel = 'Rematch',
@@ -102,6 +104,15 @@ function GameScreen({
           >
             {playAgainLabel}
           </button>
+          {onUndo !== undefined && (
+            <button
+              type="button"
+              onClick={onUndo}
+              className="cursor-pointer rounded-md border-none bg-[#e0e0e0] px-6 py-2.5 text-[13px] font-bold text-[#333] transition-colors duration-200 active:scale-[0.98] hover:bg-[#c8c8c8] [font-family:Arial,sans-serif]"
+            >
+              Undo
+            </button>
+          )}
           {onRematch !== undefined && gameOver && (
             <button
               type="button"

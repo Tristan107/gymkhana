@@ -228,4 +228,83 @@ describe('gameReducer', () => {
     expect(state.gameMode).toBe('ai')
     expect(state.humanPlayer).toBe('white')
   })
+
+  function aiGame(overrides: Partial<GameState> = {}): GameState {
+    return makeState({ gameMode: 'ai', humanPlayer: 'red', ...overrides })
+  }
+
+  it('UNDO removes the last AI move and last human move in AI mode', () => {
+    let state = aiGame()
+    state = gameReducer(state, { type: 'PLACE', row: 1, col: 1 }) // human red
+    state = gameReducer(state, { type: 'PLACE', row: 2, col: 2 }) // AI white
+    expect(state.moveHistory).toHaveLength(2)
+
+    const undone = gameReducer(state, { type: 'UNDO' })
+    expect(undone.board[1][1]).toBeNull()
+    expect(undone.board[2][2]).toBeNull()
+    expect(undone.tilesPlaced).toEqual({ red: 0, white: 0 })
+    expect(undone.currentPlayer).toBe('red')
+    expect(undone.lastMove).toBeNull()
+    expect(undone.moveHistory).toHaveLength(0)
+  })
+
+  it('UNDO during the AI turn removes the human move and the previous AI move', () => {
+    let state = aiGame()
+    state = gameReducer(state, { type: 'PLACE', row: 1, col: 1 }) // human red
+    state = gameReducer(state, { type: 'PLACE', row: 2, col: 2 }) // AI white
+    state = gameReducer(state, { type: 'PLACE', row: 3, col: 1 }) // human red, AI thinking
+
+    const undone = gameReducer(state, { type: 'UNDO' })
+    expect(undone.board[3][1]).toBeNull()
+    expect(undone.board[2][2]).toBeNull()
+    expect(undone.board[1][1]).toBe('red')
+    expect(undone.tilesPlaced).toEqual({ red: 1, white: 0 })
+    expect(undone.currentPlayer).toBe('red')
+    expect(undone.lastMove).toEqual({ player: 'red', row: 1, col: 1 })
+    expect(undone.moveHistory).toHaveLength(1)
+  })
+
+  it('UNDO clears a game-over state so the final move can be taken back', () => {
+    let state = aiGame()
+    const moves: Array<[number, number]> = [
+      [1, 1], // red
+      [2, 10], // white
+      [3, 1],
+      [4, 10],
+      [5, 1],
+      [6, 10],
+      [7, 1],
+      [8, 10],
+      [9, 1], // red completes connection
+    ]
+    for (const [row, col] of moves) {
+      state = gameReducer(state, { type: 'PLACE', row, col })
+    }
+    expect(state.gameOver).toBe(true)
+    expect(state.winner).toBe('red')
+
+    const undone = gameReducer(state, { type: 'UNDO' })
+    expect(undone.gameOver).toBe(false)
+    expect(undone.winner).toBeNull()
+    expect(undone.alertMessage).toBeNull()
+    expect(undone.board[9][1]).toBeNull()
+    expect(undone.board[8][10]).toBeNull()
+    expect(undone.currentPlayer).toBe('red')
+    expect(undone.tilesPlaced).toEqual({ red: 4, white: 3 })
+  })
+
+  it('UNDO is a no-op with no move history', () => {
+    const state = aiGame()
+    expect(gameReducer(state, { type: 'UNDO' })).toBe(state)
+  })
+
+  it('UNDO is a no-op outside AI mode', () => {
+    const placed = gameReducer(initialState, { type: 'PLACE', row: 1, col: 1 })
+    expect(gameReducer(placed, { type: 'UNDO' })).toBe(placed)
+  })
+
+  it('UNDO is a no-op when the human player is unset', () => {
+    const state = makeState({ gameMode: 'ai', moveHistory: [{ player: 'red', row: 1, col: 1 }] })
+    expect(gameReducer(state, { type: 'UNDO' })).toBe(state)
+  })
 })

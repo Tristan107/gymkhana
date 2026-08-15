@@ -18,6 +18,44 @@ const DIRS: Array<[number, number]> = [
   [0, 1],
 ]
 
+export function chooseMove(
+  board: Board,
+  player: Player,
+  tilesPlaced: Record<Player, number>,
+  gameOver: boolean
+): Move | null {
+  const moves = getValidMoves(board, player, gameOver)
+  if (moves.length === 0) return null
+
+  if (tilesPlaced[player] === 0) {
+    const opening = moves.filter((move) => !onHomeLane(move, player))
+    return pickRandom(opening.length > 0 ? opening : moves)
+  }
+
+  const winning = winningMoves(board, player)
+  if (winning.length > 0) return winning[0]
+
+  const opponent = OPPONENT[player]
+  const block = winningMoves(board, opponent).find((move) =>
+    moves.some((m) => m.row === move.row && m.col === move.col)
+  )
+  if (block) return block
+
+  const forcedWin = findForcedWinMove(board, player)
+  if (forcedWin) return forcedWin
+
+  const fork = findForkMove(board, player)
+  if (fork) return fork
+
+  const opponentFork = findForkBlock(board, player)
+  if (opponentFork) return opponentFork
+
+  const defense = findLibertyDefense(board, player, moves)
+  if (defense) return defense
+
+  return pickBestStrategic(board, moves, player)
+}
+
 function getValidMoves(board: Board, player: Player, gameOver: boolean): Move[] {
   const moves: Move[] = []
   for (let row = 0; row < BOARD_SIZE; row++) {
@@ -535,40 +573,3 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-export function chooseMove(
-  board: Board,
-  player: Player,
-  tilesPlaced: Record<Player, number>,
-  gameOver: boolean
-): Move | null {
-  const moves = getValidMoves(board, player, gameOver)
-  if (moves.length === 0) return null
-
-  if (tilesPlaced[player] === 0) {
-    const opening = moves.filter((move) => !onHomeLane(move, player))
-    return pickRandom(opening.length > 0 ? opening : moves)
-  }
-
-  const winning = winningMoves(board, player)
-  if (winning.length > 0) return winning[0]
-
-  const opponent = OPPONENT[player]
-  const block = winningMoves(board, opponent).find((move) =>
-    moves.some((m) => m.row === move.row && m.col === move.col)
-  )
-  if (block) return block
-
-  const forcedWin = findForcedWinMove(board, player)
-  if (forcedWin) return forcedWin
-
-  const fork = findForkMove(board, player)
-  if (fork) return fork
-
-  const opponentFork = findForkBlock(board, player)
-  if (opponentFork) return opponentFork
-
-  const defense = findLibertyDefense(board, player, moves)
-  if (defense) return defense
-
-  return pickBestStrategic(board, moves, player)
-}

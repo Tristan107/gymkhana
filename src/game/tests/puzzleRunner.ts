@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { BOARD_SIZE } from '../../constants'
 import type { Board, Player } from '../../types'
 import { parseBoardText } from '../boardFile'
-import { chooseMove } from '../lean_ai'
-import type { Move } from '../lean_ai'
+import { chooseMove } from '../ai_v2'
+import type { Move } from '../ai_v2'
 
 export interface PuzzleInput {
   board: Board

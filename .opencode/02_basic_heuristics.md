@@ -24,7 +24,7 @@ The AI evaluates its available moves using a strict priority order:
 ## 2. Rules and Special Definitions
 
 ### Opening Move
-On the AI's first turn of the game, it chooses randomly from the playable squares adjacent to one of its target tokens on the edge **excluding between its home-lane cells** (Row 1 and Row 11 for Red, Column A and Column K for White). For red, it means: Cols B, D, F, H, J on Row 10 or Row 2. For white, it means: Rows 2, 4, 6, 8, 10 on Col B or Col J.
+On the AI's first turn of the game, it chooses randomly from the playable squares adjacent to one of its target tokens on the edge **excluding between its home-lane cells** (Row 1 and Row 11 for Red, Column A and Column K for White). For red, it means AI has to play: Cols B, D, F, H, J on Row 10 or Row 2. For white, it means: Rows 2, 4, 6, 8, 10 on Col B or Col J.
 
 ### Double-Threat (Fork) Definition
 A double-threat (fork) is a move by one player that forces a win. It can be a delayed forced win where this player still has to play 2 or 3 moves to win, they will 100% win if they keep alternating between defending immediate wins from the opponent, and playing these 2 or 3 moves which the opponent can no longer defend against.
@@ -167,7 +167,25 @@ Turn: red
 
 Red must play F10
 ```
+```
+UC5.1
+Turn: red
 
+11   R . R . R . R . R  
+10 W . W . W . W . W . W
+ 9 . R . R . R . R . R .
+ 8 W . W . W . W . W . W
+ 7 . R . R . R . R . R .
+ 6 W . W W W W W . W . W
+ 5 . R . R R R . R W R .
+ 4 W . W W W R W W W . W
+ 3 . R . R R R R R . R .
+ 2 W . W R W W W R W . W
+ 1   R . R . R . R . R  
+   A B C D E F G H I J K
+
+Red has a forced win, he must play E1 -> G1 or G1 -> E1, no other possibilities.
+```
 ### Defend against a forced win near the edge
 ```
 UC6

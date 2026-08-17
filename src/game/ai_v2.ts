@@ -29,7 +29,7 @@ export function chooseMove(
   if (moves.length === 0) return null
 
   if (tilesPlaced[player] === 0) {
-    const opening = moves.filter((move) => !onHomeLane(move, player))
+    const opening = openingMoves(board, player, moves)
     return pickRandom(opening.length > 0 ? opening : moves)
   }
 
@@ -133,10 +133,14 @@ function findForkMove(
 
 function findForcedWinMove(board: Board, player: Player): Move | null {
   const opponent = OPPONENT[player]
-  for (const move of getValidMoves(board, player, false)) {
-    const after = place(board, move, player)
-    if (chainsWithFewPlayableLiberties(after, opponent, player, 0).length === 0) continue
-    if (winningMoves(after, opponent).length === 0) return move
+  for (const component of getComponents(board, opponent)) {
+    for (const liberty of componentOpenNeighbors(board, component)) {
+      if (!isCellPlayable(board, liberty.row, liberty.col, player, false)) continue
+      const after = place(board, liberty, player)
+      const info = chainLibertyInfo(after, component, opponent, player)
+      if (info.playable !== 0 || !info.boxable) continue
+      if (winningMoves(after, opponent).length === 0) return liberty
+    }
   }
   return null
 }
@@ -677,6 +681,28 @@ function onHomeLane(move: Move, player: Player): boolean {
   return player === 'red'
     ? move.row === 0 || move.row === BOARD_SIZE - 1
     : move.col === 0 || move.col === BOARD_SIZE - 1
+}
+
+function openingMoves(board: Board, player: Player, moves: Move[]): Move[] {
+  const edgeTokens = new Set<string>()
+  if (player === 'red') {
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      if (board[0][col] === player) edgeTokens.add(`0,${col}`)
+      if (board[BOARD_SIZE - 1][col] === player) edgeTokens.add(`${BOARD_SIZE - 1},${col}`)
+    }
+  } else {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      if (board[row][0] === player) edgeTokens.add(`${row},0`)
+      if (board[row][BOARD_SIZE - 1] === player) edgeTokens.add(`${row},${BOARD_SIZE - 1}`)
+    }
+  }
+  return moves.filter((move) => {
+    if (onHomeLane(move, player)) return false
+    for (const [dr, dc] of DIRS) {
+      if (edgeTokens.has(`${move.row + dr},${move.col + dc}`)) return true
+    }
+    return false
+  })
 }
 
 function isImminentBoxLiberty(board: Board, move: Move, player: Player): boolean {

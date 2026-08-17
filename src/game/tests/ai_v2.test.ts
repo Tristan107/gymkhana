@@ -46,6 +46,26 @@ function expectMove(board: Board, player: Player, accepted: string[]): void {
 }
 
 describe('ai_v2 chooseMove', () => {
+  it('opening move for red is restricted to rows 10 and 2 on cols B,D,F,H,J', () => {
+    const placed = tilesPlacedFor(createBoard())
+    const allowed = ['B10', 'D10', 'F10', 'H10', 'J10', 'B2', 'D2', 'F2', 'H2', 'J2'].map(idx)
+    for (let i = 0; i < 50; i++) {
+      const move = chooseMove(createBoard(), 'red', placed, false)
+      expect(move).not.toBeNull()
+      expect(allowed).toContainEqual(move)
+    }
+  })
+
+  it('opening move for white is restricted to cols B and J on rows 2,4,6,8,10', () => {
+    const placed = tilesPlacedFor(createBoard())
+    const allowed = ['B2', 'B4', 'B6', 'B8', 'B10', 'J2', 'J4', 'J6', 'J8', 'J10'].map(idx)
+    for (let i = 0; i < 50; i++) {
+      const move = chooseMove(createBoard(), 'white', placed, false)
+      expect(move).not.toBeNull()
+      expect(allowed).toContainEqual(move)
+    }
+  })
+
   it('wins immediately by connection (red plays F10 or H10)', () => {
     expectMove(
       boardWith([
@@ -134,6 +154,27 @@ describe('ai_v2 chooseMove', () => {
       ]),
       'red',
       ['F10']
+    )
+  })
+
+  it('takes a forced win near the edge (red plays E1 or G1)', () => {
+    expectMove(
+      boardWith([
+        ['E5', 'red'],
+        ['I5', 'white'],
+        ['D6', 'white'],
+        ['F6', 'white'],
+        ['D4', 'white'],
+        ['F4', 'red'],
+        ['H4', 'white'],
+        ['E3', 'red'],
+        ['G3', 'red'],
+        ['D2', 'red'],
+        ['F2', 'white'],
+        ['H2', 'red'],
+      ]),
+      'red',
+      ['E1', 'G1']
     )
   })
 

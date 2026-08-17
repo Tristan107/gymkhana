@@ -150,17 +150,12 @@ function createsFork(board: Board, move: Move, attacker: Player, defender: Playe
   )
 }
 
-function boxSupportCells(
+function seedEscapableBoundaries(
   board: Board,
-  winningMove: Move,
-  opponent: Player,
-  ai: Player
-): Set<string> {
-  const after = place(board, winningMove, opponent)
-  const escapable: boolean[][] = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => false)
-  )
-  const queue: Array<{ row: number; col: number }> = []
+  blocked: Player,
+  escapable: boolean[][],
+  queue: Array<{ row: number; col: number }>
+): void {
   for (let i = 0; i < BOARD_SIZE; i++) {
     for (const [r, c] of [
       [0, i],
@@ -168,36 +163,59 @@ function boxSupportCells(
       [i, 0],
       [i, BOARD_SIZE - 1],
     ] as Array<[number, number]>) {
-      if (after[r][c] !== opponent && !escapable[r][c]) {
+      if (board[r][c] !== blocked && !escapable[r][c]) {
         escapable[r][c] = true
         queue.push({ row: r, col: c })
       }
     }
   }
+}
+
+function floodEscapable(board: Board, blocked: Player): boolean[][] {
+  const escapable: boolean[][] = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => false)
+  )
+  const queue: Array<{ row: number; col: number }> = []
+  seedEscapableBoundaries(board, blocked, escapable, queue)
   while (queue.length > 0) {
     const { row, col } = queue.shift() as { row: number; col: number }
     for (const [dr, dc] of DIRS) {
       const nr = row + dr
       const nc = col + dc
       if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-      if (after[nr][nc] !== opponent && !escapable[nr][nc]) {
+      if (board[nr][nc] !== blocked && !escapable[nr][nc]) {
         escapable[nr][nc] = true
         queue.push({ row: nr, col: nc })
       }
     }
   }
+  return escapable
+}
+
+function collectSupport(board: Board, ai: Player, escapable: boolean[][]): Set<string> {
   const support = new Set<string>()
   for (let r = 1; r < BOARD_SIZE - 1; r++) {
     for (let c = 1; c < BOARD_SIZE - 1; c++) {
-      if (after[r][c] !== ai || escapable[r][c]) continue
+      if (board[r][c] !== ai || escapable[r][c]) continue
       for (const [dr, dc] of DIRS) {
         const nr = r + dr
         const nc = c + dc
-        if (after[nr][nc] === null) support.add(`${nr},${nc}`)
+        if (board[nr][nc] === null) support.add(`${nr},${nc}`)
       }
     }
   }
   return support
+}
+
+function boxSupportCells(
+  board: Board,
+  winningMove: Move,
+  opponent: Player,
+  ai: Player
+): Set<string> {
+  const after = place(board, winningMove, opponent)
+  const escapable = floodEscapable(after, opponent)
+  return collectSupport(after, ai, escapable)
 }
 
 function findForkBlock(
@@ -208,6 +226,103 @@ function findForkBlock(
   const immediate = findForkBlockMode(board, player, legal, 'immediate')
   const general = findForkBlockMode(board, player, legal, 'general')
   return { immediate, general }
+}
+
+function forkQualifies(
+  wins: Move[],
+  threatened: Move[][],
+  mode: 'immediate' | 'general'
+): boolean {
+  if (mode === 'immediate') return wins.length >= 2
+  return wins.length >= 1 || threatened.length >= 2
+}
+
+function candidatesFromWins(
+  afterFork: Board,
+  fork: Move,
+  wins: Move[],
+  legal: Move[],
+  opponent: Player,
+  player: Player,
+  addCandidate: (move: Move) => void
+): void {
+  const coverage = new Map<string, number>()
+  for (const win of wins) {
+    for (const key of boxSupportCells(afterFork, win, opponent, player)) {
+      coverage.set(key, (coverage.get(key) ?? 0) + 1)
+    }
+  }
+  legal
+    .map((move) => ({ move, count: coverage.get(`${move.row},${move.col}`) ?? 0 }))
+    .filter((candidate) => candidate.count >= 1)
+    .sort((a, b) => b.count - a.count)
+    .forEach(({ move }) => addCandidate(move))
+  if (legal.some((m) => m.row === fork.row && m.col === fork.col)) {
+    addCandidate(fork)
+  }
+}
+
+function candidatesFromThreats(
+  afterFork: Board,
+  fork: Move,
+  threatened: Move[][],
+  legal: Move[],
+  player: Player,
+  addCandidate: (move: Move) => void
+): void {
+  if (legal.some((m) => m.row === fork.row && m.col === fork.col)) {
+    addCandidate(fork)
+  }
+  for (const component of threatened) {
+    for (const liberty of componentLiberties(afterFork, component, player)) {
+      addCandidate(liberty)
+    }
+  }
+}
+
+function buildForkCandidates(
+  afterFork: Board,
+  fork: Move,
+  wins: Move[],
+  threatened: Move[][],
+  legal: Move[],
+  opponent: Player,
+  player: Player
+): Move[] {
+  const candidates: Move[] = []
+  const addCandidate = (move: Move): void => {
+    if (candidates.some((m) => m.row === move.row && m.col === move.col)) return
+    candidates.push(move)
+  }
+
+  if (wins.length >= 2) {
+    candidatesFromWins(afterFork, fork, wins, legal, opponent, player, addCandidate)
+  } else {
+    candidatesFromThreats(afterFork, fork, threatened, legal, player, addCandidate)
+  }
+  return candidates
+}
+
+function pickBestForkBlock(
+  board: Board,
+  fork: Move,
+  candidates: Move[],
+  opponent: Player,
+  player: Player
+): Move | null {
+  let bestMove: Move | null = null
+  let bestHealth = Infinity
+  for (const move of candidates) {
+    const next = place(board, move, player)
+    if (winningMoves(next, opponent).length === 0 && !createsFork(next, fork, opponent, player)) {
+      const health = chainsWithSinglePlayableLiberty(next, player, opponent).length
+      if (health < bestHealth) {
+        bestHealth = health
+        bestMove = move
+      }
+    }
+  }
+  return bestMove
 }
 
 function findForkBlockMode(
@@ -223,59 +338,53 @@ function findForkBlockMode(
     const afterFork = place(board, fork, opponent)
     const wins = winningMoves(afterFork, opponent)
     const threatened = chainsWithSinglePlayableLiberty(afterFork, player, opponent)
-    if (mode === 'immediate') {
-      if (wins.length < 2) continue
-    } else {
-      if (wins.length < 1 && threatened.length < 2) continue
-    }
+    if (!forkQualifies(wins, threatened, mode)) continue
 
-    const candidates: Move[] = []
-    const addCandidate = (move: Move): void => {
-      if (candidates.some((m) => m.row === move.row && m.col === move.col)) return
-      candidates.push(move)
-    }
-
-    if (wins.length >= 2) {
-      const coverage = new Map<string, number>()
-      for (const win of wins) {
-        for (const key of boxSupportCells(afterFork, win, opponent, player)) {
-          coverage.set(key, (coverage.get(key) ?? 0) + 1)
-        }
-      }
-      legal
-        .map((move) => ({ move, count: coverage.get(`${move.row},${move.col}`) ?? 0 }))
-        .filter((candidate) => candidate.count >= 1)
-        .sort((a, b) => b.count - a.count)
-        .forEach(({ move }) => addCandidate(move))
-      if (legal.some((m) => m.row === fork.row && m.col === fork.col)) {
-        addCandidate(fork)
-      }
-    } else {
-      if (legal.some((m) => m.row === fork.row && m.col === fork.col)) {
-        addCandidate(fork)
-      }
-      for (const component of threatened) {
-        for (const liberty of componentLiberties(afterFork, component, player)) {
-          addCandidate(liberty)
-        }
-      }
-    }
-
-    let bestMove: Move | null = null
-    let bestHealth = Infinity
-    for (const move of candidates) {
-      const next = place(board, move, player)
-      if (winningMoves(next, opponent).length === 0 && !createsFork(next, fork, opponent, player)) {
-        const health = chainsWithSinglePlayableLiberty(next, player, opponent).length
-        if (health < bestHealth) {
-          bestHealth = health
-          bestMove = move
-        }
-      }
-    }
+    const candidates = buildForkCandidates(
+      afterFork,
+      fork,
+      wins,
+      threatened,
+      legal,
+      opponent,
+      player
+    )
+    const bestMove = pickBestForkBlock(board, fork, candidates, opponent, player)
     if (bestMove !== null) return bestMove
   }
   return null
+}
+
+function floodComponent(
+  board: Board,
+  color: Player,
+  startRow: number,
+  startCol: number,
+  visited: Set<string>
+): Move[] {
+  const cells: Move[] = []
+  const queue: Move[] = [{ row: startRow, col: startCol }]
+  visited.add(`${startRow},${startCol}`)
+  while (queue.length > 0) {
+    const current = queue.shift() as Move
+    cells.push(current)
+    for (const [dr, dc] of DIRS) {
+      const nr = current.row + dr
+      const nc = current.col + dc
+      if (
+        nr >= 0 &&
+        nr < BOARD_SIZE &&
+        nc >= 0 &&
+        nc < BOARD_SIZE &&
+        board[nr][nc] === color &&
+        !visited.has(`${nr},${nc}`)
+      ) {
+        visited.add(`${nr},${nc}`)
+        queue.push({ row: nr, col: nc })
+      }
+    }
+  }
+  return cells
 }
 
 function getComponents(board: Board, color: Player): Move[][] {
@@ -285,29 +394,7 @@ function getComponents(board: Board, color: Player): Move[][] {
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE; col++) {
       if (board[row][col] !== color || visited.has(`${row},${col}`)) continue
-      const cells: Move[] = []
-      const queue: Move[] = [{ row, col }]
-      visited.add(`${row},${col}`)
-      while (queue.length > 0) {
-        const current = queue.shift() as Move
-        cells.push(current)
-        for (const [dr, dc] of DIRS) {
-          const nr = current.row + dr
-          const nc = current.col + dc
-          if (
-            nr >= 0 &&
-            nr < BOARD_SIZE &&
-            nc >= 0 &&
-            nc < BOARD_SIZE &&
-            board[nr][nc] === color &&
-            !visited.has(`${nr},${nc}`)
-          ) {
-            visited.add(`${nr},${nc}`)
-            queue.push({ row: nr, col: nc })
-          }
-        }
-      }
-      components.push(cells)
+      components.push(floodComponent(board, color, row, col, visited))
     }
   }
   return components
@@ -396,9 +483,7 @@ function chainsWithFewPlayableLiberties(
   )
 }
 
-function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move | null {
-  const opponent = OPPONENT[player]
-
+function findSingleLibertyDefense(board: Board, player: Player, moves: Move[]): Move | null {
   for (const component of getComponents(board, player)) {
     const liberties = componentLiberties(board, component, player)
     if (liberties.length !== 1) continue
@@ -407,7 +492,15 @@ function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move |
       return liberty
     }
   }
+  return null
+}
 
+function findBestLibertyDefense(
+  board: Board,
+  player: Player,
+  opponent: Player,
+  moves: Move[]
+): Move | null {
   let bestMove: Move | null = null
   let bestScore = -1
   for (const component of chainsWithFewPlayableLiberties(board, player, opponent, 2)) {
@@ -428,58 +521,135 @@ function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move |
   return bestMove
 }
 
+function findLibertyDefense(board: Board, player: Player, moves: Move[]): Move | null {
+  const opponent = OPPONENT[player]
+
+  const single = findSingleLibertyDefense(board, player, moves)
+  if (single !== null) return single
+
+  return findBestLibertyDefense(board, player, opponent, moves)
+}
+
+function adjacentCells(board: Board, component: Move[]): { cells: Move[]; seen: Set<string> } {
+  const seen = new Set<string>()
+  const cells: Move[] = []
+  for (const cell of component) {
+    for (const [dr, dc] of DIRS) {
+      const nr = cell.row + dr
+      const nc = cell.col + dc
+      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+      if (board[nr][nc] !== null) continue
+      const key = `${nr},${nc}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      cells.push({ row: nr, col: nc })
+    }
+  }
+  return { cells, seen }
+}
+
+function isBoxable(board: Board, adjacent: Move[], seen: Set<string>): boolean {
+  const flooded = new Set<string>(seen)
+  const queue: Move[] = [...adjacent]
+  while (queue.length > 0) {
+    const current = queue.shift() as Move
+    if (
+      current.row === 0 ||
+      current.row === BOARD_SIZE - 1 ||
+      current.col === 0 ||
+      current.col === BOARD_SIZE - 1
+    ) {
+      return false
+    }
+    for (const [dr, dc] of DIRS) {
+      const nr = current.row + dr
+      const nc = current.col + dc
+      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+      if (board[nr][nc] !== null) continue
+      const key = `${nr},${nc}`
+      if (flooded.has(key)) continue
+      flooded.add(key)
+      queue.push({ row: nr, col: nc })
+    }
+  }
+  return true
+}
+
+function countPlayable(board: Board, adjacent: Move[], color: Player): number {
+  let count = 0
+  for (const cell of adjacent) {
+    if (isCellPlayable(board, cell.row, cell.col, color, false)) count++
+  }
+  return count
+}
+
 function boxInTilesNeeded(board: Board, color: Player): number {
   const opponent = OPPONENT[color]
   let minimum = Infinity
   for (const component of getComponents(board, opponent)) {
-    const seen = new Set<string>()
-    const adjacent: Move[] = []
-    for (const cell of component) {
-      for (const [dr, dc] of DIRS) {
-        const nr = cell.row + dr
-        const nc = cell.col + dc
-        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-        if (board[nr][nc] !== null) continue
-        const key = `${nr},${nc}`
-        if (seen.has(key)) continue
-        seen.add(key)
-        adjacent.push({ row: nr, col: nc })
-      }
-    }
-    if (adjacent.length === 0) continue
+    const { cells, seen } = adjacentCells(board, component)
+    if (cells.length === 0) continue
+    if (!isBoxable(board, cells, seen)) continue
+    minimum = Math.min(minimum, countPlayable(board, cells, color))
+  }
+  return minimum
+}
 
-    const flooded = new Set<string>(seen)
-    const queue: Move[] = [...adjacent]
-    let boxable = true
-    while (queue.length > 0) {
-      const current = queue.shift() as Move
-      if (
-        current.row === 0 ||
-        current.row === BOARD_SIZE - 1 ||
-        current.col === 0 ||
-        current.col === BOARD_SIZE - 1
-      ) {
-        boxable = false
-        break
-      }
-      for (const [dr, dc] of DIRS) {
-        const nr = current.row + dr
-        const nc = current.col + dc
-        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-        if (board[nr][nc] !== null) continue
-        const key = `${nr},${nc}`
-        if (flooded.has(key)) continue
-        flooded.add(key)
-        queue.push({ row: nr, col: nc })
-      }
-    }
-    if (!boxable) continue
+function edgeWeight(board: Board, color: Player, r: number, c: number): number | null {
+  if (board[r][c] === OPPONENT[color]) return null
+  if (board[r][c] === null && !isCellPlayable(board, r, c, color, false)) return null
+  return board[r][c] === color ? 0 : 1
+}
 
-    let count = 0
-    for (const cell of adjacent) {
-      if (isCellPlayable(board, cell.row, cell.col, color, false)) count++
+function pushDeque(deque: number[], index: number, weight: number): void {
+  if (weight === 0) deque.unshift(index)
+  else deque.push(index)
+}
+
+function seedDistances(
+  board: Board,
+  color: Player,
+  horizontal: boolean,
+  dist: number[][],
+  deque: number[]
+): void {
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const row = horizontal ? i : 0
+    const col = horizontal ? 0 : i
+    const weight = edgeWeight(board, color, row, col)
+    if (weight === null) continue
+    dist[row][col] = weight
+    pushDeque(deque, row * BOARD_SIZE + col, weight)
+  }
+}
+
+function relaxNeighbors(
+  board: Board,
+  color: Player,
+  row: number,
+  col: number,
+  dist: number[][],
+  deque: number[]
+): void {
+  for (const [dr, dc] of DIRS) {
+    const nr = row + dr
+    const nc = col + dc
+    if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+    const weight = edgeWeight(board, color, nr, nc)
+    if (weight === null) continue
+    if (dist[row][col] + weight < dist[nr][nc]) {
+      dist[nr][nc] = dist[row][col] + weight
+      pushDeque(deque, nr * BOARD_SIZE + nc, weight)
     }
-    minimum = Math.min(minimum, count)
+  }
+}
+
+function minTargetDistance(dist: number[][], horizontal: boolean): number {
+  let minimum = Infinity
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const row = horizontal ? i : BOARD_SIZE - 1
+    const col = horizontal ? BOARD_SIZE - 1 : i
+    minimum = Math.min(minimum, dist[row][col])
   }
   return minimum
 }
@@ -491,44 +661,16 @@ function tilesToConnect(board: Board, color: Player): number {
   )
   const deque: number[] = []
 
-  for (let i = 0; i < BOARD_SIZE; i++) {
-    const row = horizontal ? i : 0
-    const col = horizontal ? 0 : i
-    const cell = board[row][col]
-    if (cell === OPPONENT[color]) continue
-    if (cell === null && !isCellPlayable(board, row, col, color, false)) continue
-    const weight = cell === color ? 0 : 1
-    dist[row][col] = weight
-    if (weight === 0) deque.unshift(row * BOARD_SIZE + col)
-    else deque.push(row * BOARD_SIZE + col)
-  }
+  seedDistances(board, color, horizontal, dist, deque)
 
   while (deque.length > 0) {
     const index = deque.shift() as number
     const row = Math.floor(index / BOARD_SIZE)
     const col = index % BOARD_SIZE
-    for (const [dr, dc] of DIRS) {
-      const nr = row + dr
-      const nc = col + dc
-      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-      if (board[nr][nc] === OPPONENT[color]) continue
-      if (board[nr][nc] === null && !isCellPlayable(board, nr, nc, color, false)) continue
-      const weight = board[nr][nc] === color ? 0 : 1
-      if (dist[row][col] + weight < dist[nr][nc]) {
-        dist[nr][nc] = dist[row][col] + weight
-        if (weight === 0) deque.unshift(nr * BOARD_SIZE + nc)
-        else deque.push(nr * BOARD_SIZE + nc)
-      }
-    }
+    relaxNeighbors(board, color, row, col, dist, deque)
   }
 
-  let minimum = Infinity
-  for (let i = 0; i < BOARD_SIZE; i++) {
-    const row = horizontal ? i : BOARD_SIZE - 1
-    const col = horizontal ? BOARD_SIZE - 1 : i
-    minimum = Math.min(minimum, dist[row][col])
-  }
-  return minimum
+  return minTargetDistance(dist, horizontal)
 }
 
 function onHomeLane(move: Move, player: Player): boolean {
@@ -549,19 +691,53 @@ function isImminentBoxLiberty(board: Board, move: Move, player: Player): boolean
   return false
 }
 
+function countAxisNeighbor(board: Board, player: Player, r: number, c: number): number {
+  if (player === 'red') {
+    if (r + 1 < BOARD_SIZE && board[r + 1][c] === player) return 1
+  } else if (c + 1 < BOARD_SIZE && board[r][c + 1] === player) {
+    return 1
+  }
+  return 0
+}
+
 function axisAdjacency(board: Board, player: Player): number {
   let count = 0
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       if (board[r][c] !== player) continue
-      if (player === 'red') {
-        if (r + 1 < BOARD_SIZE && board[r + 1][c] === player) count++
-      } else if (c + 1 < BOARD_SIZE && board[r][c + 1] === player) {
-        count++
-      }
+      count += countAxisNeighbor(board, player, r, c)
     }
   }
   return count
+}
+
+function floodComponentWithPlaced(
+  board: Board,
+  player: Player,
+  startRow: number,
+  startCol: number,
+  visited: Set<string>
+): Move[] | null {
+  const cells: Move[] = []
+  const queue: Move[] = [{ row: startRow, col: startCol }]
+  visited.add(`${startRow},${startCol}`)
+  let hasPlaced = false
+  while (queue.length > 0) {
+    const current = queue.shift() as Move
+    cells.push(current)
+    if (!isFixedPeg(current.row, current.col)) hasPlaced = true
+    for (const [dr, dc] of DIRS) {
+      const nr = current.row + dr
+      const nc = current.col + dc
+      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+      if (board[nr][nc] !== player) continue
+      const key = `${nr},${nc}`
+      if (visited.has(key)) continue
+      visited.add(key)
+      queue.push({ row: nr, col: nc })
+    }
+  }
+  return hasPlaced ? cells : null
 }
 
 function activeCells(board: Board, player: Player): Set<string> {
@@ -570,31 +746,52 @@ function activeCells(board: Board, player: Player): Set<string> {
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       if (board[r][c] !== player || visited.has(`${r},${c}`)) continue
-      const cells: Move[] = []
-      const queue: Move[] = [{ row: r, col: c }]
-      visited.add(`${r},${c}`)
-      let hasPlaced = false
-      while (queue.length > 0) {
-        const current = queue.shift() as Move
-        cells.push(current)
-        if (!isFixedPeg(current.row, current.col)) hasPlaced = true
-        for (const [dr, dc] of DIRS) {
-          const nr = current.row + dr
-          const nc = current.col + dc
-          if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-          if (board[nr][nc] !== player) continue
-          const key = `${nr},${nc}`
-          if (visited.has(key)) continue
-          visited.add(key)
-          queue.push({ row: nr, col: nc })
-        }
-      }
-      if (hasPlaced) {
-        for (const cell of cells) active.add(`${cell.row},${cell.col}`)
-      }
+      const cells = floodComponentWithPlaced(board, player, r, c, visited)
+      if (cells === null) continue
+      for (const cell of cells) active.add(`${cell.row},${cell.col}`)
     }
   }
   return active
+}
+
+interface StrategicMetrics {
+  connect: number
+  oppConnect: number
+  zigzag: number
+  health: number
+  box: number
+}
+
+function isNearActive(move: Move, activeSet: Set<string>): boolean {
+  for (const [dr, dc] of DIRS) {
+    const nr = move.row + dr
+    const nc = move.col + dc
+    if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
+    if (activeSet.has(`${nr},${nc}`)) return true
+  }
+  return false
+}
+
+function isBetterMetrics(candidate: StrategicMetrics, best: StrategicMetrics): boolean {
+  if (candidate.connect < best.connect) return true
+  if (candidate.connect > best.connect) return false
+  if (candidate.oppConnect > best.oppConnect) return true
+  if (candidate.oppConnect < best.oppConnect) return false
+  if (candidate.zigzag < best.zigzag) return true
+  if (candidate.zigzag > best.zigzag) return false
+  if (candidate.health < best.health) return true
+  if (candidate.health > best.health) return false
+  return candidate.box < best.box
+}
+
+function equalMetrics(a: StrategicMetrics, b: StrategicMetrics): boolean {
+  return (
+    a.connect === b.connect &&
+    a.oppConnect === b.oppConnect &&
+    a.zigzag === b.zigzag &&
+    a.health === b.health &&
+    a.box === b.box
+  )
 }
 
 function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
@@ -604,64 +801,31 @@ function pickBestStrategic(board: Board, moves: Move[], player: Player): Move {
   )
   const base = candidates.length > 0 ? candidates : moves
   const activeSet = activeCells(board, player)
-  const active = base.filter((move) => {
-    for (const [dr, dc] of DIRS) {
-      const nr = move.row + dr
-      const nc = move.col + dc
-      if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue
-      if (activeSet.has(`${nr},${nc}`)) return true
-    }
-    return false
-  })
+  const active = base.filter((move) => isNearActive(move, activeSet))
   const pool = active.length > 0 ? active : base
-  let bestConnect = Infinity
-  let bestOppConnect = -Infinity
-  let bestZigzag = Infinity
-  let bestHealth = Infinity
-  let bestBox = Infinity
+
+  const best: StrategicMetrics = {
+    connect: Infinity,
+    oppConnect: -Infinity,
+    zigzag: Infinity,
+    health: Infinity,
+    box: Infinity,
+  }
   let bestMoves: Move[] = []
   for (const move of pool) {
     const next = place(board, move, player)
-    const connect = tilesToConnect(next, player)
-    const oppConnect = tilesToConnect(next, opponent)
-    const zigzag = axisAdjacency(next, player)
-    const health = chainsWithFewPlayableLiberties(next, player, opponent, 2).length
-    const box = boxInTilesNeeded(next, player)
-    if (connect < bestConnect) {
-      bestConnect = connect
-      bestOppConnect = oppConnect
-      bestZigzag = zigzag
-      bestHealth = health
-      bestBox = box
+    const metrics: StrategicMetrics = {
+      connect: tilesToConnect(next, player),
+      oppConnect: tilesToConnect(next, opponent),
+      zigzag: axisAdjacency(next, player),
+      health: chainsWithFewPlayableLiberties(next, player, opponent, 2).length,
+      box: boxInTilesNeeded(next, player),
+    }
+    if (isBetterMetrics(metrics, best)) {
+      Object.assign(best, metrics)
       bestMoves = [move]
-    } else if (connect === bestConnect) {
-      if (oppConnect > bestOppConnect) {
-        bestOppConnect = oppConnect
-        bestZigzag = zigzag
-        bestHealth = health
-        bestBox = box
-        bestMoves = [move]
-      } else if (oppConnect === bestOppConnect) {
-        if (zigzag < bestZigzag) {
-          bestZigzag = zigzag
-          bestHealth = health
-          bestBox = box
-          bestMoves = [move]
-        } else if (zigzag === bestZigzag) {
-          if (health < bestHealth) {
-            bestHealth = health
-            bestBox = box
-            bestMoves = [move]
-          } else if (health === bestHealth) {
-            if (box < bestBox) {
-              bestBox = box
-              bestMoves = [move]
-            } else if (box === bestBox) {
-              bestMoves.push(move)
-            }
-          }
-        }
-      }
+    } else if (equalMetrics(metrics, best)) {
+      bestMoves.push(move)
     }
   }
   return pickRandom(bestMoves)

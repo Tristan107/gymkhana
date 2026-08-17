@@ -12,7 +12,7 @@ interface DevMenuProps {
 const buttonBase =
   'cursor-pointer rounded-md px-5 py-2.5 text-[13px] font-bold transition-colors duration-200 active:scale-[0.98] [font-family:Arial,sans-serif]'
 
-function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoordinates }: DevMenuProps) {
+function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoordinates }: Readonly<DevMenuProps>) {
   const [pasteText, setPasteText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -42,7 +42,16 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/60"
+        onClick={onClose}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close developer menu"
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') onClose()
+        }}
+      />
       <div className="relative flex w-[320px] flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl [font-family:Arial,sans-serif]">
         <h2 className="m-0 text-center text-base font-bold text-[#fdfaf2]">
           Developer Menu
@@ -55,6 +64,7 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
               onChange={onToggleCoordinates}
               className="h-4 w-4 cursor-pointer accent-[#f6b252]"
             />
+            {' '}
             Show coordinates
           </label>
           <button

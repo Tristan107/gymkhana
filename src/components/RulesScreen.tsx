@@ -9,7 +9,7 @@ interface RulesScreenProps {
 
 const IMG_CLASS = 'w-full rounded border border-white/10'
 
-function RulesScreen({ onBack }: RulesScreenProps) {
+function RulesScreen({ onBack }: Readonly<RulesScreenProps>) {
   return (
     <div className="box-border flex min-h-screen flex-col items-center p-5">
       <div className="flex w-full max-w-[1100px] items-center justify-end">

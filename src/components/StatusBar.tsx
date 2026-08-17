@@ -10,7 +10,7 @@ interface StatusBarProps {
   humanPlayer: Player | null
 }
 
-function StatusBar({ currentPlayer, gameMode, humanPlayer }: StatusBarProps) {
+function StatusBar({ currentPlayer, gameMode, humanPlayer }: Readonly<StatusBarProps>) {
   const color = PLAYER_COLORS[currentPlayer]
   const glow = currentPlayer === 'red'
     ? '0 0 8px rgba(255,51,68,0.6)'

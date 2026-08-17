@@ -15,7 +15,7 @@ const PRIMARY_BUTTON =
 const GOLD_BUTTON =
   'cursor-pointer rounded-md border-none bg-[#f6b252] px-5 py-3 text-[15px] font-bold text-[#1a1a1a] transition-colors duration-200 active:scale-[0.98] hover:brightness-110 [font-family:Arial,sans-serif]'
 
-function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: MenuScreenProps) {
+function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: Readonly<MenuScreenProps>) {
   const [sidePickerOpen, setSidePickerOpen] = useState(false)
   const sidePickerRef = useRef<HTMLDialogElement>(null)
 
@@ -35,7 +35,7 @@ function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: MenuScre
         <h1 className="m-0 flex justify-center text-[42px] uppercase leading-none tracking-[2px] min-[480px]:text-[64px]">
           {TITLE.split('').map((char, index) => (
             <span
-              key={index}
+              key={`${char}-${index}`}
               className={index % 2 === 0 ? 'text-[#fdfaf2]' : 'text-[#c9182b]'}
               style={{ textShadow: '3px 4px 0px rgba(0,0,0,0.6)' }}
             >

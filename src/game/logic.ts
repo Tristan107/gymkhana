@@ -58,18 +58,14 @@ export function checkConnectionWin(board: Board, player: Player): boolean {
   return hasPath(board, 'white', 0, BOARD_SIZE - 1, true)
 }
 
-function hasPath(
+function seedQueue(
   board: Board,
   color: Player,
   start: number,
-  end: number,
-  isHorizontal: boolean
-): boolean {
-  const visited = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => false)
-  )
-  const queue: Array<{ row: number; col: number }> = []
-
+  isHorizontal: boolean,
+  visited: boolean[][],
+  queue: Array<{ row: number; col: number }>
+): void {
   if (!isHorizontal) {
     for (let col = 0; col < BOARD_SIZE; col++) {
       if (board[start][col] === color) {
@@ -85,46 +81,74 @@ function hasPath(
       }
     }
   }
+}
+
+function reachedEnd(r: number, c: number, end: number, isHorizontal: boolean): boolean {
+  return isHorizontal ? c === end : r === end
+}
+
+function expandNeighbors(
+  board: Board,
+  r: number,
+  c: number,
+  color: Player,
+  visited: boolean[][],
+  queue: Array<{ row: number; col: number }>
+): void {
+  for (const [dr, dc] of [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ]) {
+    const nr = r + dr
+    const nc = c + dc
+    if (
+      nr >= 0 &&
+      nr < BOARD_SIZE &&
+      nc >= 0 &&
+      nc < BOARD_SIZE &&
+      !visited[nr][nc] &&
+      board[nr][nc] === color
+    ) {
+      visited[nr][nc] = true
+      queue.push({ row: nr, col: nc })
+    }
+  }
+}
+
+function hasPath(
+  board: Board,
+  color: Player,
+  start: number,
+  end: number,
+  isHorizontal: boolean
+): boolean {
+  const visited = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => false)
+  )
+  const queue: Array<{ row: number; col: number }> = []
+
+  seedQueue(board, color, start, isHorizontal, visited, queue)
 
   while (queue.length > 0) {
     const current = queue.shift()
     if (current === undefined) break
     const { row: r, col: c } = current
 
-    if (!isHorizontal && r === end) return true
-    if (isHorizontal && c === end) return true
+    if (reachedEnd(r, c, end, isHorizontal)) return true
 
-    for (const [dr, dc] of [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-    ]) {
-      const nr = r + dr
-      const nc = c + dc
-      if (
-        nr >= 0 &&
-        nr < BOARD_SIZE &&
-        nc >= 0 &&
-        nc < BOARD_SIZE &&
-        !visited[nr][nc] &&
-        board[nr][nc] === color
-      ) {
-        visited[nr][nc] = true
-        queue.push({ row: nr, col: nc })
-      }
-    }
+    expandNeighbors(board, r, c, color, visited, queue)
   }
   return false
 }
 
-export function checkSurroundWin(board: Board, player: Player): boolean {
-  const opponent = OPPONENT[player]
-  const escapable = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => false)
-  )
-  const queue: Array<{ r: number; c: number }> = []
-
+function seedBorder(
+  board: Board,
+  player: Player,
+  escapable: boolean[][],
+  queue: Array<{ r: number; c: number }>
+): void {
   for (let i = 0; i < BOARD_SIZE; i++) {
     if (board[0][i] !== player) {
       escapable[0][i] = true
@@ -143,28 +167,34 @@ export function checkSurroundWin(board: Board, player: Player): boolean {
       queue.push({ r: i, c: BOARD_SIZE - 1 })
     }
   }
+}
 
-  while (queue.length > 0) {
-    const current = queue.shift()
-    if (current === undefined) break
-    const { r, c } = current
-    for (const [dr, dc] of [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-    ]) {
-      const nr = r + dr
-      const nc = c + dc
-      if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-        if (!escapable[nr][nc] && board[nr][nc] !== player) {
-          escapable[nr][nc] = true
-          queue.push({ r: nr, c: nc })
-        }
+function expandEscapable(
+  board: Board,
+  r: number,
+  c: number,
+  player: Player,
+  escapable: boolean[][],
+  queue: Array<{ r: number; c: number }>
+): void {
+  for (const [dr, dc] of [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ]) {
+    const nr = r + dr
+    const nc = c + dc
+    if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+      if (!escapable[nr][nc] && board[nr][nc] !== player) {
+        escapable[nr][nc] = true
+        queue.push({ r: nr, c: nc })
       }
     }
   }
+}
 
+function hasTrappedOpponent(board: Board, opponent: Player, escapable: boolean[][]): boolean {
   for (let r = 1; r < BOARD_SIZE - 1; r++) {
     for (let c = 1; c < BOARD_SIZE - 1; c++) {
       if (board[r][c] === opponent && !escapable[r][c]) {
@@ -173,4 +203,23 @@ export function checkSurroundWin(board: Board, player: Player): boolean {
     }
   }
   return false
+}
+
+export function checkSurroundWin(board: Board, player: Player): boolean {
+  const opponent = OPPONENT[player]
+  const escapable = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => false)
+  )
+  const queue: Array<{ r: number; c: number }> = []
+
+  seedBorder(board, player, escapable, queue)
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (current === undefined) break
+    const { r, c } = current
+    expandEscapable(board, r, c, player, escapable, queue)
+  }
+
+  return hasTrappedOpponent(board, opponent, escapable)
 }

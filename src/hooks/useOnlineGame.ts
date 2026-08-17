@@ -68,7 +68,7 @@ export function useOnlineGame(code: string, playerId: string): OnlineGameHandle 
   const myColor = useMemo<Player | null>(() => {
     if (room === null) return null
     if (room.host.playerId === playerId) return room.host.color
-    if (room.guest != null && room.guest.playerId === playerId) return room.guest.color
+    if (room.guest?.playerId === playerId) return room.guest.color
     return null
   }, [room, playerId])
 

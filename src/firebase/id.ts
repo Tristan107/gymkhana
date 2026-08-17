@@ -29,7 +29,7 @@ export function generateRoomCode(): string {
 
 export function normalizeRoomCode(raw: string): string {
   const trimmed = raw.trim()
-  const paramMatch = trimmed.match(/[?&]r=([A-Za-z0-9]+)/)
+  const paramMatch = /[?&]r=([A-Za-z0-9]+)/.exec(trimmed)
   if (paramMatch !== null) return paramMatch[1].toUpperCase()
   return trimmed.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
 }
@@ -50,5 +50,6 @@ export function clearRoomCodeFromUrl(): void {
   if (!url.searchParams.has('r')) return
   url.searchParams.delete('r')
   const query = url.searchParams.toString()
-  window.history.replaceState(null, '', `${url.pathname}${query === '' ? '' : `?${query}`}`)
+  const separator = query === '' ? '' : `?${query}`
+  window.history.replaceState(null, '', `${url.pathname}${separator}`)
 }

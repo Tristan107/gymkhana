@@ -24,7 +24,7 @@ function GameOverOverlay({
   showPlayAgain = true,
   onRematch,
   rematchLabel = 'Rematch',
-}: GameOverOverlayProps) {
+}: Readonly<GameOverOverlayProps>) {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
@@ -34,7 +34,9 @@ function GameOverOverlay({
   if (!gameOver || message === null || dismissed) return null
 
   const isRed = winner === 'red'
-  const accent = isRed ? 'text-[#ff9999]' : winner === null ? 'text-[#ccc]' : 'text-white'
+  let accent = 'text-white'
+  if (isRed) accent = 'text-[#ff9999]'
+  else if (winner === null) accent = 'text-[#ccc]'
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-md bg-black/70 backdrop-blur-sm">

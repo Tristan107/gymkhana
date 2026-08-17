@@ -32,7 +32,7 @@ const DEFAULT_PSEUDO: Record<Player, string> = {
 const challengeTitle = (pseudo: string): string =>
   `${pseudo} has challenged you to a game of Gymkhana !`
 
-function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenProps) {
+function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<OnlineScreenProps>) {
   const [phase, setPhase] = useState<Phase>({ kind: 'form' })
   const [mode, setMode] = useState<'create' | 'join' | null>(null)
   const [joinCode, setJoinCode] = useState('')
@@ -57,7 +57,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
           setPhase({ kind: 'busy', message: 'Joining game…' })
           const joined = await joinRoom(initialCode, myId)
           if (cancelled) return
-          if (joined === null || joined.guest === null) {
+          if (!joined?.guest) {
             setError('Could not join that game. It may be full.')
             setPhase({ kind: 'form' })
             return
@@ -70,7 +70,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
         onGameReady(initialCode, room.host.color)
         return
       }
-      if (room.guest != null && room.guest.playerId === myId) {
+      if (room.guest?.playerId === myId) {
         onGameReady(initialCode, room.guest.color)
         return
       }
@@ -116,7 +116,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
     setError(null)
     setPhase({ kind: 'busy', message: 'Joining game…' })
     const joined = await joinRoom(code, myId)
-    if (joined === null || joined.guest === null) {
+    if (!joined?.guest) {
       setError('Invalid room code or the game is already full.')
       setPhase({ kind: 'form' })
       return
@@ -162,7 +162,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
         <h1 className="m-0 flex justify-center text-[42px] uppercase leading-none tracking-[2px] min-[480px]:text-[64px]">
           {Array.from('Gymkhana').map((char, index) => (
             <span
-              key={index}
+              key={`${char}-${index}`}
               className={index % 2 === 0 ? 'text-[#fdfaf2]' : 'text-[#c9182b]'}
               style={{ textShadow: '3px 4px 0px rgba(0,0,0,0.6)' }}
             >
@@ -312,6 +312,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: OnlineScreenPr
             </button>
             <p className="m-0 flex items-center gap-2 text-sm font-bold text-[#ddd] [font-family:Arial,sans-serif]">
               <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#f6b252] border-t-transparent" />
+              {' '}
               Waiting for opponent to join…
             </p>
             <button type="button" onClick={handleCancel} className={GHOST_BUTTON}>

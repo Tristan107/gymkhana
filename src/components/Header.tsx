@@ -7,7 +7,7 @@ function Header() {
       <h1 className="m-0 flex text-[26px] uppercase leading-none tracking-[2px]">
         {TITLE.split('').map((char, index) => (
           <span
-            key={index}
+            key={`${char}-${index}`}
             className={index % 2 === 0 ? 'text-[#fdfaf2]' : 'text-[#c9182b]'}
             style={{ textShadow: '2px 3px 0px rgba(0,0,0,0.6)' }}
           >

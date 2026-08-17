@@ -71,120 +71,125 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         moveHistory: [],
       }
 
-    case 'PLACE': {
-      const { row, col } = action
-      if (
-        state.gameOver ||
-        state.board[row][col] !== null ||
-        state.tilesPlaced[state.currentPlayer] >= MAX_TILES ||
-        !isCellPlayable(state.board, row, col, state.currentPlayer, state.gameOver)
-      ) {
-        return state
-      }
+    case 'PLACE':
+      return applyPlace(state, action.row, action.col)
 
-      const player = state.currentPlayer
-      const board = state.board.map((rowCells) => [...rowCells])
-      board[row][col] = player
-      const tilesPlaced: Record<Player, number> = {
-        ...state.tilesPlaced,
-        [player]: state.tilesPlaced[player] + 1,
-      }
-      const lastMove = { row, col }
-      const moveHistory = [...state.moveHistory, { player, row, col }]
-
-      if (checkConnectionWin(board, player)) {
-        return {
-          ...state,
-          board,
-          tilesPlaced,
-          lastMove,
-          moveHistory,
-          gameOver: true,
-          winner: player,
-          alertMessage: `${player.toUpperCase()} wins by Connection!`,
-        }
-      }
-      if (checkSurroundWin(board, player)) {
-        return {
-          ...state,
-          board,
-          tilesPlaced,
-          lastMove,
-          moveHistory,
-          gameOver: true,
-          winner: player,
-          alertMessage: `${player.toUpperCase()} wins by Boxing-In!`,
-        }
-      }
-      if (tilesPlaced.red === MAX_TILES && tilesPlaced.white === MAX_TILES) {
-        return {
-          ...state,
-          board,
-          tilesPlaced,
-          lastMove,
-          moveHistory,
-          gameOver: true,
-          winner: null,
-          alertMessage: "It's a draw!",
-        }
-      }
-      return {
-        ...state,
-        board,
-        tilesPlaced,
-        lastMove,
-        moveHistory,
-        currentPlayer: OPPONENT[player],
-      }
-    }
-
-    case 'UNDO': {
-      if (
-        state.gameMode !== 'ai' ||
-        state.humanPlayer === null ||
-        state.moveHistory.length === 0
-      ) {
-        return state
-      }
-
-      const aiPlayer = OPPONENT[state.humanPlayer]
-      const removed = new Set<number>()
-      let aiFound = false
-      let humanFound = false
-      for (let i = state.moveHistory.length - 1; i >= 0; i--) {
-        const move = state.moveHistory[i]
-        if (move.player === aiPlayer && !aiFound) {
-          removed.add(i)
-          aiFound = true
-        } else if (move.player === state.humanPlayer && !humanFound) {
-          removed.add(i)
-          humanFound = true
-        }
-        if (aiFound && humanFound) break
-      }
-
-      const moveHistory = state.moveHistory.filter((_, i) => !removed.has(i))
-      const board = createBoard()
-      const tilesPlaced: Record<Player, number> = { red: 0, white: 0 }
-      for (const move of moveHistory) {
-        board[move.row][move.col] = move.player
-        tilesPlaced[move.player]++
-      }
-
-      return {
-        ...state,
-        board,
-        tilesPlaced,
-        currentPlayer: state.humanPlayer,
-        gameOver: false,
-        winner: null,
-        lastMove: moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null,
-        alertMessage: null,
-        moveHistory,
-      }
-    }
+    case 'UNDO':
+      return applyUndo(state)
 
     default:
       return state
+  }
+}
+
+function applyPlace(state: GameState, row: number, col: number): GameState {
+  if (
+    state.gameOver ||
+    state.board[row][col] !== null ||
+    state.tilesPlaced[state.currentPlayer] >= MAX_TILES ||
+    !isCellPlayable(state.board, row, col, state.currentPlayer, state.gameOver)
+  ) {
+    return state
+  }
+
+  const player = state.currentPlayer
+  const board = state.board.map((rowCells) => [...rowCells])
+  board[row][col] = player
+  const tilesPlaced: Record<Player, number> = {
+    ...state.tilesPlaced,
+    [player]: state.tilesPlaced[player] + 1,
+  }
+  const lastMove = { row, col }
+  const moveHistory = [...state.moveHistory, { player, row, col }]
+
+  if (checkConnectionWin(board, player)) {
+    return {
+      ...state,
+      board,
+      tilesPlaced,
+      lastMove,
+      moveHistory,
+      gameOver: true,
+      winner: player,
+      alertMessage: `${player.toUpperCase()} wins by Connection!`,
+    }
+  }
+  if (checkSurroundWin(board, player)) {
+    return {
+      ...state,
+      board,
+      tilesPlaced,
+      lastMove,
+      moveHistory,
+      gameOver: true,
+      winner: player,
+      alertMessage: `${player.toUpperCase()} wins by Boxing-In!`,
+    }
+  }
+  if (tilesPlaced.red === MAX_TILES && tilesPlaced.white === MAX_TILES) {
+    return {
+      ...state,
+      board,
+      tilesPlaced,
+      lastMove,
+      moveHistory,
+      gameOver: true,
+      winner: null,
+      alertMessage: "It's a draw!",
+    }
+  }
+  return {
+    ...state,
+    board,
+    tilesPlaced,
+    lastMove,
+    moveHistory,
+    currentPlayer: OPPONENT[player],
+  }
+}
+
+function applyUndo(state: GameState): GameState {
+  if (
+    state.gameMode !== 'ai' ||
+    state.humanPlayer === null ||
+    state.moveHistory.length === 0
+  ) {
+    return state
+  }
+
+  const aiPlayer = OPPONENT[state.humanPlayer]
+  const removed = new Set<number>()
+  let aiFound = false
+  let humanFound = false
+  for (let i = state.moveHistory.length - 1; i >= 0; i--) {
+    const move = state.moveHistory[i]
+    if (move.player === aiPlayer && !aiFound) {
+      removed.add(i)
+      aiFound = true
+    } else if (move.player === state.humanPlayer && !humanFound) {
+      removed.add(i)
+      humanFound = true
+    }
+    if (aiFound && humanFound) break
+  }
+
+  const moveHistory = state.moveHistory.filter((_, i) => !removed.has(i))
+  const board = createBoard()
+  const tilesPlaced: Record<Player, number> = { red: 0, white: 0 }
+  for (const move of moveHistory) {
+    board[move.row][move.col] = move.player
+    tilesPlaced[move.player]++
+  }
+
+  return {
+    ...state,
+    board,
+    tilesPlaced,
+    currentPlayer: state.humanPlayer,
+    gameOver: false,
+    winner: null,
+    lastMove: moveHistory.at(-1) ?? null,
+    alertMessage: null,
+    moveHistory,
   }
 }

@@ -49,7 +49,7 @@ function GameScreen({
   onShowRules,
   interactive = true,
   showCoordinates = false,
-}: GameScreenProps) {
+}: Readonly<GameScreenProps>) {
   return (
     <div className="flex min-h-screen flex-col items-center p-5 box-border">
       <Header />

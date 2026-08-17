@@ -8,7 +8,7 @@ interface OnlineGameScreenProps {
   onShowRules: () => void
 }
 
-function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: OnlineGameScreenProps) {
+function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: Readonly<OnlineGameScreenProps>) {
   const {
     room,
     state,
@@ -28,8 +28,9 @@ function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: OnlineGameSc
   }
 
   const rematchRequester = room?.rematchRequester ?? null
-  const rematchState =
-    rematchRequester === null ? 'idle' : rematchRequester === playerId ? 'pending' : 'accept'
+  let rematchState: 'idle' | 'pending' | 'accept' = 'idle'
+  if (rematchRequester === playerId) rematchState = 'pending'
+  else if (rematchRequester !== null) rematchState = 'accept'
 
   const handleRematch = () => {
     if (rematchState === 'idle') proposeRematch()
@@ -37,12 +38,9 @@ function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: OnlineGameSc
     else acceptRematch()
   }
 
-  const rematchLabel =
-    rematchState === 'idle'
-      ? 'Rematch'
-      : rematchState === 'pending'
-        ? 'Cancel rematch'
-        : 'Accept rematch'
+  let rematchLabel = 'Rematch'
+  if (rematchState === 'pending') rematchLabel = 'Cancel rematch'
+  else if (rematchState === 'accept') rematchLabel = 'Accept rematch'
 
   if (closed && !state.gameOver) {
     return (

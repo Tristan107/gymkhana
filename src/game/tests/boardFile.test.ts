@@ -22,7 +22,7 @@ describe('boardToText', () => {
     expect(lines[13]).toBe('   A B C D E F G H I J K')
     const boardLines = lines.slice(2, 13)
     for (const boardLine of boardLines) {
-      expect(boardLine.length).toBe(24)
+      expect(boardLine).toHaveLength(24)
     }
   })
 

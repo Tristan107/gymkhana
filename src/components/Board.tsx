@@ -21,7 +21,7 @@ interface HoveredCell {
   col: number
 }
 
-function Board({ board, currentPlayer, lastMove, gameOver, tilesPlaced, interactive, showCoordinates, onCellClick }: BoardProps) {
+function Board({ board, currentPlayer, lastMove, gameOver, tilesPlaced, interactive, showCoordinates, onCellClick }: Readonly<BoardProps>) {
   const [hovered, setHovered] = useState<HoveredCell | null>(null)
 
   const boardCells = Array.from({ length: BOARD_SIZE }, (_, row) =>
@@ -52,7 +52,7 @@ function Board({ board, currentPlayer, lastMove, gameOver, tilesPlaced, interact
   if (!showCoordinates) {
     rendered = boardCells.flat()
   } else {
-    const colLabel = (col: number) => String.fromCharCode(65 + col)
+    const colLabel = (col: number) => String.fromCodePoint(65 + col)
     const coord = (key: string, text: string) => (
       <div key={key} className="coord-cell">
         {text}

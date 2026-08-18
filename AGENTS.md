@@ -31,8 +31,3 @@ Terminal 2: `npm run dev`
   (run it via `npm run test:ai`).
 - No comments unless asked; keep code style consistent with existing files.
 
-## Plan Mode
-At the end of a planning session with an AI agent, the agent must not offer to implement the plan. Instead, it must ask the user for the name of the .md file in which to store the plan.
-
-Once the user provides the filename, the agent must ask the user to switch to build mode. In build mode, the agent should write the plan in Markdown format to ./opencode/plans/<name_of_md_file>, including all necessary file references, dependencies, and other relevant information required for another model to implement the plan.
-

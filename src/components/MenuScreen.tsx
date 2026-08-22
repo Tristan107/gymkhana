@@ -30,7 +30,7 @@ function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: Readonly
   }, [sidePickerOpen])
 
   return (
-    <div className="box-border flex min-h-screen flex-col items-center justify-center gap-8 p-5">
+    <div data-testid="menu-screen" className="box-border flex min-h-screen flex-col items-center justify-center gap-8 p-5">
       <div className="text-center">
         <h1 className="m-0 flex justify-center text-[42px] uppercase leading-none tracking-[2px] min-[480px]:text-[64px]">
           {TITLE.split('').map((char, index) => (
@@ -49,20 +49,21 @@ function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: Readonly
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-3">
-        <button type="button" onClick={onPlayOnline} className={PRIMARY_BUTTON}>
+        <button type="button" onClick={onPlayOnline} data-testid="play-online" className={PRIMARY_BUTTON}>
           Play online game
         </button>
-        <button type="button" onClick={onPlayPvP} className={PRIMARY_BUTTON}>
+        <button type="button" onClick={onPlayPvP} data-testid="play-pvp" className={PRIMARY_BUTTON}>
           Play local game
         </button>
         <button
           type="button"
           onClick={() => setSidePickerOpen(true)}
+          data-testid="play-ai"
           className={PRIMARY_BUTTON}
         >
           Play vs AI
         </button>
-        <button type="button" onClick={onShowRules} className={GOLD_BUTTON}>
+        <button type="button" onClick={onShowRules} data-testid="how-to-play" className={GOLD_BUTTON}>
           How to Play
         </button>
       </div>
@@ -70,16 +71,20 @@ function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: Readonly
       <dialog
         ref={sidePickerRef}
         onClose={() => setSidePickerOpen(false)}
+        data-testid="side-picker"
+        role="dialog"
+        aria-labelledby="side-picker-title"
         className="m-auto w-[calc(100%-32px)] max-w-xs rounded-lg border border-white/10 p-6 text-[#fdfaf2] shadow-2xl [font-family:Arial,sans-serif] [background:radial-gradient(circle,#152b3c_0%,#0b141d_100%)] backdrop:bg-black/60"
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="m-0 text-sm font-bold uppercase tracking-[1px] text-[#f6b252]">
+          <h2 id="side-picker-title" className="m-0 text-sm font-bold uppercase tracking-[1px] text-[#f6b252]">
             Choose your side
           </h2>
           <button
             type="button"
             onClick={() => setSidePickerOpen(false)}
             aria-label="Close side selection"
+            data-testid="side-picker-close"
             className="cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-0.5 text-[13px] font-bold text-[#ccc] transition-colors duration-200 hover:bg-white/5"
           >
             ✕
@@ -93,17 +98,20 @@ function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: Readonly
             type="button"
             onClick={() => onPlayAI('red')}
             aria-label="Play as Red"
+            data-testid="side-red"
             className="h-9 w-9 cursor-pointer rounded-md border-none bg-[#ff3344] transition-colors duration-200 active:scale-[0.95] hover:brightness-110"
           />
           <button
             type="button"
             onClick={() => onPlayAI('white')}
             aria-label="Play as White"
+            data-testid="side-white"
             className="h-9 w-9 cursor-pointer rounded-md border-none bg-[#e0e0e0] transition-colors duration-200 active:scale-[0.95] hover:bg-[#c9c9c9]"
           />
           <button
             type="button"
             onClick={() => setSidePickerOpen(false)}
+            data-testid="side-picker-cancel"
             className="mt-1 cursor-pointer rounded-md border border-white/20 bg-transparent px-5 py-2 text-[13px] text-[#ccc] transition-colors duration-200 hover:bg-white/5"
           >
             Cancel

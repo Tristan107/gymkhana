@@ -39,27 +39,30 @@ function GameOverOverlay({
   else if (winner === null) accent = 'text-[#ccc]'
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-md bg-black/70 backdrop-blur-sm">
+    <div data-testid="game-over-overlay" role="dialog" aria-modal="true" aria-labelledby="game-over-message" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-md bg-black/70 backdrop-blur-sm">
       <button
         type="button"
         onClick={() => setDismissed(true)}
         aria-label="Close result"
+        data-testid="game-over-close"
         className="absolute top-2 right-2 cursor-pointer rounded-md border border-white/20 bg-transparent px-2.5 py-0.5 text-[13px] font-bold text-[#ccc] transition-colors duration-200 hover:bg-white/5"
       >
         ✕
       </button>
       <div
+        id="game-over-message"
+        data-testid="win-message"
         className={`px-6 text-center text-2xl font-bold tracking-wide uppercase ${accent} [font-family:Arial,sans-serif]`}
       >
         {message}
       </div>
       {showPlayAgain && (
-        <button type="button" onClick={onPlayAgain} className={ACTION_BUTTON}>
+        <button type="button" onClick={onPlayAgain} data-testid="game-over-play-again" className={ACTION_BUTTON}>
           {playAgainLabel}
         </button>
       )}
       {onRematch !== undefined && (
-        <button type="button" onClick={onRematch} className={ACTION_BUTTON}>
+        <button type="button" onClick={onRematch} data-testid="game-over-rematch" className={ACTION_BUTTON}>
           {rematchLabel}
         </button>
       )}

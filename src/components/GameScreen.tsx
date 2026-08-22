@@ -51,7 +51,7 @@ function GameScreen({
   showCoordinates = false,
 }: Readonly<GameScreenProps>) {
   return (
-    <div className="flex min-h-screen flex-col items-center p-5 box-border">
+    <div data-testid="game-screen" role="main" className="flex min-h-screen flex-col items-center p-5 box-border">
       <Header />
 
       <div className="flex w-full max-w-[1100px] flex-col items-center gap-10 min-[901px]:flex-row min-[901px]:items-start min-[901px]:justify-center">
@@ -89,6 +89,7 @@ function GameScreen({
           <button
             type="button"
             onClick={onMenu}
+            data-testid="menu-button"
             className="cursor-pointer rounded-md border border-white/20 bg-transparent px-5 py-2.5 text-[13px] font-bold text-[#ccc] transition-colors duration-200 hover:bg-white/5 [font-family:Arial,sans-serif]"
           >
             Menu
@@ -96,6 +97,7 @@ function GameScreen({
           <button
             type="button"
             onClick={onShowRules}
+            data-testid="how-to-play"
             className="cursor-pointer rounded-md border-none bg-[#f6b252] px-5 py-2.5 text-[13px] font-bold text-[#1a1a1a] transition-colors duration-200 active:scale-[0.98] hover:brightness-110 [font-family:Arial,sans-serif]"
           >
             How to Play
@@ -103,6 +105,7 @@ function GameScreen({
           <button
             type="button"
             onClick={onPlayAgain}
+            data-testid="play-again"
             className="cursor-pointer rounded-md border-none bg-[#e0e0e0] px-6 py-2.5 text-[13px] font-bold text-[#333] transition-colors duration-200 active:scale-[0.98] hover:bg-[#c8c8c8] [font-family:Arial,sans-serif]"
           >
             {playAgainLabel}
@@ -111,6 +114,7 @@ function GameScreen({
             <button
               type="button"
               onClick={onUndo}
+              data-testid="undo-button"
               className="cursor-pointer rounded-md border-none bg-[#e0e0e0] px-6 py-2.5 text-[13px] font-bold text-[#333] transition-colors duration-200 active:scale-[0.98] hover:bg-[#c8c8c8] [font-family:Arial,sans-serif]"
             >
               Undo
@@ -120,17 +124,18 @@ function GameScreen({
             <button
               type="button"
               onClick={onRematch}
+              data-testid="rematch-button"
               className="cursor-pointer rounded-md border-none bg-[#e0e0e0] px-6 py-2.5 text-[13px] font-bold text-[#333] transition-colors duration-200 active:scale-[0.98] hover:bg-[#c8c8c8] [font-family:Arial,sans-serif]"
             >
               {rematchLabel}
             </button>
           )}
           <div className="mt-1 flex flex-row justify-center gap-3 min-[901px]:flex-col">
-            <div className="flex items-center gap-1.5 text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
+            <div data-testid="red-tiles-left" className="flex items-center gap-1.5 text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
               <span className="h-3 w-3 rounded-[2px] bg-[#ff3344]" />
               <span>Red tiles left: {MAX_TILES - tilesPlaced.red}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
+            <div data-testid="white-tiles-left" className="flex items-center gap-1.5 text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
               <span className="h-3 w-3 rounded-[2px] bg-white" />
               <span>White tiles left: {MAX_TILES - tilesPlaced.white}</span>
             </div>

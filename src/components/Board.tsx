@@ -78,7 +78,7 @@ function Board({ board, currentPlayer, lastMove, gameOver, tilesPlaced, interact
     ]
   }
 
-  return <div className={showCoordinates ? 'board coords' : 'board'}>{rendered}</div>
+  return <div data-testid="board" role="grid" aria-label="Game board" className={showCoordinates ? 'board coords' : 'board'}>{rendered}</div>
 }
 
 export default Board

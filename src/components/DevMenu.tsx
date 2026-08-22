@@ -42,14 +42,14 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <button
-        type="button"
+      <div
+        data-testid="dev-backdrop"
         aria-label="Close developer menu"
         className="absolute inset-0 bg-black/60"
         onClick={onClose}
-/>
-      <div className="relative flex w-[320px] flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl [font-family:Arial,sans-serif]">
-        <h2 className="m-0 text-center text-base font-bold text-[#fdfaf2]">
+      />
+      <div data-testid="dev-menu" role="dialog" aria-labelledby="dev-menu-title" className="relative flex w-[320px] flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl [font-family:Arial,sans-serif]">
+        <h2 id="dev-menu-title" className="m-0 text-center text-base font-bold text-[#fdfaf2]">
           Developer Menu
         </h2>
         <div className="flex flex-col gap-3">
@@ -58,6 +58,9 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
               type="checkbox"
               checked={showCoordinates}
               onChange={onToggleCoordinates}
+              data-testid="dev-toggle-coordinates"
+              role="switch"
+              aria-label="Show coordinates"
               className="h-4 w-4 cursor-pointer accent-[#f6b252]"
             />
             {' '}
@@ -66,6 +69,7 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
           <button
             type="button"
             onClick={handleExport}
+            data-testid="dev-export"
             className={`${buttonBase} border-none bg-[#f6b252] text-[#1a1a1a] hover:brightness-110`}
           >
             Export board
@@ -78,6 +82,7 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
           <button
             type="button"
             onClick={handleToggleImport}
+            data-testid="dev-import"
             className={`${buttonBase} border-none bg-[#e0e0e0] text-[#333] hover:bg-[#c8c8c8]`}
           >
             Import board
@@ -89,11 +94,14 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
                 onChange={(event) => setPasteText(event.target.value)}
                 rows={10}
                 spellCheck={false}
+                data-testid="dev-import-textarea"
+                aria-label="Board data to import"
                 className="w-full resize-y rounded-md border border-white/20 bg-[#0d0d0d] p-2 text-[12px] text-[#fdfaf2] outline-none focus:border-white/40 [font-family:monospace]"
               />
               <button
                 type="button"
                 onClick={handleImportPasted}
+                data-testid="dev-import-submit"
                 className={`${buttonBase} border-none bg-[#f6b252] text-[#1a1a1a] hover:brightness-110`}
               >
                 Load board
@@ -109,6 +117,7 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
         <button
           type="button"
           onClick={onClose}
+          data-testid="dev-close"
           className={`${buttonBase} border border-white/20 bg-transparent text-[#ccc] hover:bg-white/5`}
         >
           Close

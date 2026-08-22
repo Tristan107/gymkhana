@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactElement } from 'react'
+import type { ReactElement } from 'react'
 import { MAX_TILES } from '../constants'
 import { getTileOrientation, isCellPlayable, isFixedPeg } from '../game/logic'
 import type { Board as BoardType, Player } from '../types'
@@ -52,10 +52,6 @@ function renderPreview(
   )
 }
 
-function handleKeyDown(event: KeyboardEvent<HTMLDivElement>, onClick: () => void): void {
-  if (event.key === 'Enter' || event.key === ' ') onClick()
-}
-
 function Cell({
   row,
   col,
@@ -92,16 +88,15 @@ function Cell({
 
   const cellProps = interactiveCell
     ? {
-        role: 'button' as const,
-        tabIndex: 0,
         onClick,
-        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => handleKeyDown(event, onClick),
         onMouseEnter,
         onMouseLeave,
       }
     : {}
 
-  return <div className={className} {...cellProps}>{content}</div>
+  const colLabel = String.fromCodePoint(65 + col)
+  const rowLabel = 11 - row
+  return <div className={className} aria-label={`Cell ${colLabel}${rowLabel}`} {...cellProps}>{content}</div>
 }
 
 export default Cell

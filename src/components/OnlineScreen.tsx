@@ -157,7 +157,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
   }, [phase, pseudo])
 
   return (
-    <div className="box-border flex min-h-screen flex-col items-center justify-center gap-8 p-5">
+    <div data-testid="online-screen" className="box-border flex min-h-screen flex-col items-center justify-center gap-8 p-5">
       <div className="text-center">
         <h1 className="m-0 flex justify-center text-[42px] uppercase leading-none tracking-[2px] min-[480px]:text-[64px]">
           {Array.from('Gymkhana').map((char, index) => (
@@ -179,15 +179,15 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
         <div className="flex w-full max-w-xs flex-col gap-3">
           {mode === null && (
             <>
-              <button type="button" onClick={() => setMode('create')} className={BUTTON}>
+              <button type="button" onClick={() => setMode('create')} data-testid="create-game" className={BUTTON}>
                 Create a game
               </button>
-              <button type="button" onClick={() => setMode('join')} className={BUTTON}>
+              <button type="button" onClick={() => setMode('join')} data-testid="join-game" className={BUTTON}>
                 Join a game
               </button>
             </>
           )}
-          <button type="button" onClick={onBack} className={GHOST_BUTTON}>
+          <button type="button" onClick={onBack} data-testid="online-back" className={GHOST_BUTTON}>
             Back
           </button>
 
@@ -210,6 +210,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
                   maxLength={24}
                   spellCheck={false}
                   placeholder="Red"
+                  data-testid="pseudo-input"
                   className={INPUT}
                 />
               </label>
@@ -227,6 +228,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
                     void handleCreate('red')
                   }}
                   aria-label="Create game as Red"
+                  data-testid="create-red"
                   className="h-10 w-10 cursor-pointer rounded-md border-none bg-[#ff3344] transition-colors duration-200 active:scale-[0.95] hover:brightness-110"
                 />
                 <button
@@ -236,12 +238,14 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
                     void handleCreate('white')
                   }}
                   aria-label="Create game as White"
+                  data-testid="create-white"
                   className="h-10 w-10 cursor-pointer rounded-md border-none bg-[#e0e0e0] transition-colors duration-200 active:scale-[0.95] hover:bg-[#c9c9c9]"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setMode(null)}
+                data-testid="create-cancel"
                 className={GHOST_BUTTON}
               >
                 Cancel
@@ -260,12 +264,14 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
                 }}
                 placeholder="Game code or link"
                 spellCheck={false}
+                data-testid="join-code-input"
                 className="rounded-md border border-white/20 bg-transparent px-3 py-2.5 text-center text-sm font-bold tracking-[2px] text-[#fdfaf2] uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-[#666] [font-family:Arial,sans-serif] focus:border-[#f6b252] focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => void handleJoin()}
                 disabled={joinCode.trim() === ''}
+                data-testid="join-submit"
                 className={`${GOLD_BUTTON} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 Join
@@ -273,6 +279,7 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
               <button
                 type="button"
                 onClick={() => setMode(null)}
+                data-testid="join-cancel"
                 className={GHOST_BUTTON}
               >
                 Cancel
@@ -305,17 +312,18 @@ function OnlineScreen({ myId, initialCode, onBack, onGameReady }: Readonly<Onlin
               readOnly
               value={getShareUrl(phase.code)}
               onFocus={(event) => event.target.select()}
+              data-testid="share-url-input"
               className="w-full rounded-md border border-white/20 bg-black/30 px-3 py-2 text-center text-xs text-[#ccc] [font-family:monospace] focus:outline-none"
             />
-            <button type="button" onClick={() => void handleCopy()} className={GOLD_BUTTON}>
+            <button type="button" onClick={() => void handleCopy()} data-testid="copy-link" className={GOLD_BUTTON}>
               {copied ? 'Copied!' : 'Copy link'}
             </button>
-            <p className="m-0 flex items-center gap-2 text-sm font-bold text-[#ddd] [font-family:Arial,sans-serif]">
+            <p data-testid="waiting-opponent" className="m-0 flex items-center gap-2 text-sm font-bold text-[#ddd] [font-family:Arial,sans-serif]">
               <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#f6b252] border-t-transparent" />
               {' '}
               Waiting for opponent to join…
             </p>
-            <button type="button" onClick={handleCancel} className={GHOST_BUTTON}>
+            <button type="button" onClick={handleCancel} data-testid="waiting-cancel" className={GHOST_BUTTON}>
               Cancel
             </button>
           </div>

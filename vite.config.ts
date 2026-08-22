@@ -30,6 +30,7 @@ export default defineConfig({
   },
   test: {
     slowTestThreshold: 2000,
+    exclude: ['e2e/**', 'node_modules/**'],
   },
   base: '/gymkhana/', // Exact github repo name for hosting
 })

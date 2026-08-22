@@ -11,11 +11,12 @@ const IMG_CLASS = 'w-full rounded border border-white/10'
 
 function RulesScreen({ onBack }: Readonly<RulesScreenProps>) {
   return (
-    <div className="box-border flex min-h-screen flex-col items-center p-5">
+    <div data-testid="rules-screen" role="main" className="box-border flex min-h-screen flex-col items-center p-5">
       <div className="flex w-full max-w-[1100px] items-center justify-end">
         <button
           type="button"
           onClick={onBack}
+          data-testid="rules-back"
           className="cursor-pointer rounded-md border border-white/20 bg-transparent px-5 py-2 text-[13px] font-bold text-[#ccc] transition-colors duration-200 hover:bg-white/5 [font-family:Arial,sans-serif]"
         >
           Back
@@ -38,8 +39,8 @@ function RulesScreen({ onBack }: Readonly<RulesScreenProps>) {
               vertically for red, horizontally for white.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <img src={redWinsConnection} alt="Red wins by connecting the sides" className={IMG_CLASS} />
-              <img src={whiteWinsConnection} alt="White wins by connecting the sides" className={IMG_CLASS} />
+              <img src={redWinsConnection} alt="Red wins by connecting the sides" data-testid="img-red-connection" className={IMG_CLASS} />
+              <img src={whiteWinsConnection} alt="White wins by connecting the sides" data-testid="img-white-connection" className={IMG_CLASS} />
             </div>
           </div>
 
@@ -50,8 +51,8 @@ function RulesScreen({ onBack }: Readonly<RulesScreenProps>) {
               Box in an opponent's chain.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <img src={redWinsBoxIn} alt="Red wins by boxing in an opponent's chain" className={IMG_CLASS} />
-              <img src={whiteWinsBoxIn} alt="White wins by boxing in an opponent's chain" className={IMG_CLASS} />
+              <img src={redWinsBoxIn} alt="Red wins by boxing in an opponent's chain" data-testid="img-red-boxin" className={IMG_CLASS} />
+              <img src={whiteWinsBoxIn} alt="White wins by boxing in an opponent's chain" data-testid="img-white-boxin" className={IMG_CLASS} />
             </div>
           </div>
         </div>

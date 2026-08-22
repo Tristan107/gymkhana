@@ -36,13 +36,13 @@ function StatusBar({ currentPlayer, gameMode, humanPlayer }: Readonly<StatusBarP
   const timerText = `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`
 
   return (
-    <div className="box-border flex min-h-[46px] w-[448px] items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 p-3 text-sm [font-family:Arial,sans-serif]">
+    <div data-testid="status-bar" role="status" aria-live="polite" className="box-border flex min-h-[46px] w-[448px] items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 p-3 text-sm [font-family:Arial,sans-serif]">
       {isYourTurn && (
         <>
-          <span className="font-bold" style={{ color, textShadow: glow }}>
+          <span data-testid="turn-indicator" className="font-bold" style={{ color, textShadow: glow }}>
             Your turn
           </span>
-          <span className="text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
+          <span data-testid="turn-timer" className="text-[13px] font-bold text-[#ddd] [font-family:Arial,sans-serif]">
             - {timerText}
           </span>
         </>

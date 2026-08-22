@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Playwright
+e2e-results
+playwright-report
+
 # Firebase
 .firebase/
 firebase-debug.log

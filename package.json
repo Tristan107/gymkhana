@@ -12,6 +12,7 @@
     "test:ai": "vitest run src/game/tests/ai_v2.test.ts",
     "test:all": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "predeploy": "npm run build",
     "deploy:rules": "firebase deploy --only database",
     "deploy": "npm run deploy:rules"
@@ -24,6 +25,7 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

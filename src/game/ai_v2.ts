@@ -683,19 +683,26 @@ function onHomeLane(move: Move, player: Player): boolean {
     : move.col === 0 || move.col === BOARD_SIZE - 1
 }
 
-function openingMoves(board: Board, player: Player, moves: Move[]): Move[] {
-  const edgeTokens = new Set<string>()
-  if (player === 'red') {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      if (board[0][col] === player) edgeTokens.add(`0,${col}`)
-      if (board[BOARD_SIZE - 1][col] === player) edgeTokens.add(`${BOARD_SIZE - 1},${col}`)
-    }
-  } else {
-    for (let row = 0; row < BOARD_SIZE; row++) {
-      if (board[row][0] === player) edgeTokens.add(`${row},0`)
-      if (board[row][BOARD_SIZE - 1] === player) edgeTokens.add(`${row},${BOARD_SIZE - 1}`)
-    }
+function collectRedEdgeTokens(board: Board, player: Player): Set<string> {
+  const tokens = new Set<string>()
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    if (board[0][i] === player) tokens.add(`0,${i}`)
+    if (board[BOARD_SIZE - 1][i] === player) tokens.add(`${BOARD_SIZE - 1},${i}`)
   }
+  return tokens
+}
+
+function collectWhiteEdgeTokens(board: Board, player: Player): Set<string> {
+  const tokens = new Set<string>()
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    if (board[i][0] === player) tokens.add(`${i},0`)
+    if (board[i][BOARD_SIZE - 1] === player) tokens.add(`${i},${BOARD_SIZE - 1}`)
+  }
+  return tokens
+}
+
+function openingMoves(board: Board, player: Player, moves: Move[]): Move[] {
+  const edgeTokens = player === 'red' ? collectRedEdgeTokens(board, player) : collectWhiteEdgeTokens(board, player)
   return moves.filter((move) => {
     if (onHomeLane(move, player)) return false
     for (const [dr, dc] of DIRS) {

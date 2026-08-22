@@ -42,16 +42,12 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
+      <button
+        type="button"
+        aria-label="Close developer menu"
         className="absolute inset-0 bg-black/60"
         onClick={onClose}
-        role="button"
-        tabIndex={-1}
-        aria-label="Close developer menu"
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') onClose()
-        }}
-      />
+/>
       <div className="relative flex w-[320px] flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl [font-family:Arial,sans-serif]">
         <h2 className="m-0 text-center text-base font-bold text-[#fdfaf2]">
           Developer Menu

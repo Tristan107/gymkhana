@@ -3,7 +3,7 @@ set -euo pipefail
 
 SONAR_HOST="${SONAR_HOST:-http://localhost:9000}"
 SONAR_TOKEN="${SONAR_TOKEN:?Set SONAR_TOKEN to your SonarQube token}"
-PROJECT_KEY="Gymkhaha"
+PROJECT_KEY="Gymkhana"
 MAX_WAIT=120
 
 sonar-scanner-npm \

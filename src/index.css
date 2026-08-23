@@ -9,3 +9,30 @@ body {
   box-sizing: border-box;
   min-height: 100vh;
 }
+
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes draw-underline {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 200ms ease-out forwards;
+}
+
+.animate-draw-underline {
+  animation: draw-underline 500ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-up-fade,
+  .animate-draw-underline {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

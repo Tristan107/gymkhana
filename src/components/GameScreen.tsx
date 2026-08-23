@@ -1,6 +1,6 @@
 import type { Board as BoardType, Player } from '../types'
 import Board from './Board'
-import GameOverOverlay from './GameOverOverlay'
+import GameOverPanel from './GameOverPanel'
 import Header from './Header'
 import StatusBar from './StatusBar'
 import { MAX_TILES } from '../constants'
@@ -19,7 +19,6 @@ interface GameScreenProps {
   onPlayAgain: () => void
   playAgainLabel: string
   onUndo?: () => void
-  overlayPlayAgain?: boolean
   onRematch?: () => void
   rematchLabel?: string
   onMenu: () => void
@@ -42,7 +41,6 @@ function GameScreen({
   onPlayAgain,
   playAgainLabel,
   onUndo,
-  overlayPlayAgain = true,
   onRematch,
   rematchLabel = 'Rematch',
   onMenu,
@@ -72,16 +70,7 @@ function GameScreen({
               showCoordinates={showCoordinates}
               onCellClick={onCellClick}
             />
-            <GameOverOverlay
-              gameOver={gameOver}
-              message={alertMessage}
-              winner={winner}
-              onPlayAgain={onPlayAgain}
-              playAgainLabel={playAgainLabel}
-              showPlayAgain={overlayPlayAgain}
-              onRematch={onRematch}
-              rematchLabel={rematchLabel}
-            />
+
           </div>
         </div>
 
@@ -140,6 +129,11 @@ function GameScreen({
               <span>White tiles left: {MAX_TILES - tilesPlaced.white}</span>
             </div>
           </div>
+          <GameOverPanel
+            gameOver={gameOver}
+            message={alertMessage}
+            winner={winner}
+          />
         </div>
       </div>
     </main>

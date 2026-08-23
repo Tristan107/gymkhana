@@ -90,7 +90,6 @@ function OnlineGameScreen({ code, playerId, onLeave, onShowRules }: Readonly<Onl
         interactive={isMyTurn}
         onPlayAgain={handleLeave}
         playAgainLabel="Leave game"
-        overlayPlayAgain={false}
         onRematch={handleRematch}
         rematchLabel={rematchLabel}
         onMenu={handleLeave}

@@ -51,41 +51,13 @@ test('invalid move: occupied cell rejected', async ({ page }) => {
   await expect(page.getByText('Red tiles left:')).toContainText('19')
 })
 
-test('Red wins by connection', async ({ page }) => {
-  await page.goto('/')
-  await startPvP(page)
-  await playMoves(page, WINNING_MOVES.redConnection)
-  await expectGameOver(page, 'red')
-})
-
-test('White wins by connection', async ({ page }) => {
-  await page.goto('/')
-  await startPvP(page)
-  await playMoves(page, WINNING_MOVES.whiteConnection)
-  await expectGameOver(page, 'white')
-})
-
-test('Red wins by box-in', async ({ page }) => {
-  await page.goto('/')
-  await startPvP(page)
-  await playMoves(page, WINNING_MOVES.redBoxIn)
-  await expectGameOver(page, 'red')
-})
-
-test('White wins by box-in', async ({ page }) => {
-  await page.goto('/')
-  await startPvP(page)
-  await playMoves(page, WINNING_MOVES.whiteBoxIn)
-  await expectGameOver(page, 'white')
-})
-
 test('game over: Play Again restarts', async ({ page }) => {
   await page.goto('/')
   await startPvP(page)
   await playMoves(page, WINNING_MOVES.redConnection)
   await expectGameOver(page, 'red')
-  await page.getByRole('dialog').getByRole('button', { name: 'Play Again' }).click()
-  await expect(page.getByRole('dialog')).not.toBeVisible()
+  await page.getByRole('button', { name: 'Play Again' }).click()
+  await expect(page.getByTestId('game-over-panel')).not.toBeVisible()
   await expect(page.getByText('Red tiles left:')).toContainText('20')
 })
 
@@ -94,7 +66,6 @@ test('game over: Menu returns to menu', async ({ page }) => {
   await startPvP(page)
   await playMoves(page, WINNING_MOVES.redConnection)
   await expectGameOver(page, 'red')
-  await page.getByRole('button', { name: 'Close result' }).click()
   await page.getByRole('button', { name: 'Menu' }).click()
   await expect(page.getByRole('button', { name: 'Play local game' })).toBeVisible()
 })

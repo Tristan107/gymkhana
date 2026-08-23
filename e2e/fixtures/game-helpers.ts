@@ -59,11 +59,11 @@ export async function expectGameOver(
   page: Page,
   winner: 'red' | 'white' | 'draw',
 ): Promise<void> {
-  const overlay = page.getByRole('dialog')
-  await expect(overlay).toBeVisible()
+  const panel = page.getByTestId('game-over-panel')
+  await expect(panel).toBeVisible()
   if (winner === 'draw') {
-    await expect(overlay.getByText(/draw/i)).toBeVisible()
+    await expect(panel.getByText(/draw/i)).toBeVisible()
   } else {
-    await expect(overlay.getByText(new RegExp(winner, 'i'))).toBeVisible()
+    await expect(panel.getByText(new RegExp(winner, 'i'))).toBeVisible()
   }
 }

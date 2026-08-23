@@ -1,7 +1,9 @@
-import { MAX_TILES, OPPONENT } from '../constants'
+import { MAX_TILES } from '../constants'
 import type { Board, Player } from '../types'
 import type { ParsedGame } from './boardFile'
-import { checkConnectionWin, checkSurroundWin, createBoard, isCellPlayable } from './logic'
+import { createBoard, toPublicBoard, fromPublicBoard } from './logic'
+import { createFlatBoard, cloneBoard, applyMove, checkConnectionWin, checkSurroundWin } from './flatBoard'
+import type { FlatBoard, PlayerCode } from '../types'
 
 export interface MoveRecord {
   player: Player
@@ -29,6 +31,27 @@ export type GameAction =
   | { type: 'LOAD_BOARD'; game: ParsedGame }
   | { type: 'UNDO' }
 
+interface InternalGameState {
+  board: FlatBoard
+  currentPlayer: PlayerCode
+  gameOver: boolean
+  winner: PlayerCode | 0
+  tilesPlaced: [number, number]
+  lastMove: { row: number; col: number } | null
+  alertMessage: string | null
+  gameMode: 'pvp' | 'ai' | 'online'
+  humanPlayer: PlayerCode | 0
+  moveHistory: MoveRecord[]
+}
+
+function playerToCode(player: Player): PlayerCode {
+  return player === 'red' ? 1 : 2
+}
+
+function codeToPlayer(code: PlayerCode): Player | null {
+  return code === 1 ? 'red' : code === 2 ? 'white' : null
+}
+
 export const initialState: GameState = createInitialState()
 
 function createInitialState(): GameState {
@@ -46,148 +69,214 @@ function createInitialState(): GameState {
   }
 }
 
-export function gameReducer(state: GameState, action: GameAction): GameState {
-  switch (action.type) {
-    case 'RESET':
-      return createInitialState()
-
-    case 'START_AI':
-      return {
-        ...createInitialState(),
-        gameMode: 'ai',
-        humanPlayer: action.human,
-      }
-
-    case 'LOAD_BOARD':
-      return {
-        ...state,
-        board: action.game.board,
-        currentPlayer: action.game.currentPlayer,
-        tilesPlaced: action.game.tilesPlaced,
-        lastMove: null,
-        gameOver: action.game.gameOver,
-        winner: action.game.winner,
-        alertMessage: action.game.alertMessage,
-        moveHistory: [],
-      }
-
-    case 'PLACE':
-      return applyPlace(state, action.row, action.col)
-
-    case 'UNDO':
-      return applyUndo(state)
-
-    default:
-      return state
+function createInternalState(): InternalGameState {
+  return {
+    board: createFlatBoard(),
+    currentPlayer: 1,
+    gameOver: false,
+    winner: 0,
+    tilesPlaced: [0, 0],
+    lastMove: null,
+    alertMessage: null,
+    gameMode: 'pvp',
+    humanPlayer: 0,
+    moveHistory: [],
   }
 }
 
-function applyPlace(state: GameState, row: number, col: number): GameState {
-  if (
-    state.gameOver ||
-    state.board[row][col] !== null ||
-    state.tilesPlaced[state.currentPlayer] >= MAX_TILES ||
-    !isCellPlayable(state.board, row, col, state.currentPlayer, state.gameOver)
-  ) {
-    return state
+function toPublicState(internal: InternalGameState): GameState {
+  return {
+    board: toPublicBoard(internal.board),
+    currentPlayer: internal.currentPlayer === 1 ? 'red' : 'white',
+    gameOver: internal.gameOver,
+    winner: internal.winner === 1 ? 'red' : internal.winner === 2 ? 'white' : null,
+    tilesPlaced: { red: internal.tilesPlaced[0], white: internal.tilesPlaced[1] },
+    lastMove: internal.lastMove,
+    alertMessage: internal.alertMessage,
+    gameMode: internal.gameMode,
+    humanPlayer: internal.humanPlayer === 1 ? 'red' : internal.humanPlayer === 2 ? 'white' : null,
+    moveHistory: internal.moveHistory,
+  }
+}
+
+function fromPublicState(state: GameState): InternalGameState {
+  const internal = createInternalState()
+  fromPublicBoard(state.board, internal.board)
+  internal.currentPlayer = playerToCode(state.currentPlayer)
+  internal.gameOver = state.gameOver
+  internal.winner = state.winner ? playerToCode(state.winner) : 0
+  internal.tilesPlaced = [state.tilesPlaced.red, state.tilesPlaced.white]
+  internal.lastMove = state.lastMove
+  internal.alertMessage = state.alertMessage
+  internal.gameMode = state.gameMode
+  internal.humanPlayer = state.humanPlayer ? playerToCode(state.humanPlayer) : 0
+  internal.moveHistory = state.moveHistory
+  return internal
+}
+
+export function gameReducer(state: GameState, action: GameAction): GameState {
+  let internal: InternalGameState
+  let internalUnchanged = false
+  
+  if (action.type === 'LOAD_BOARD') {
+    internal = createInternalState()
+    fromPublicBoard(action.game.board, internal.board)
+    internal.currentPlayer = playerToCode(action.game.currentPlayer)
+    internal.tilesPlaced = [action.game.tilesPlaced.red, action.game.tilesPlaced.white]
+    internal.gameOver = action.game.gameOver
+    internal.winner = action.game.winner ? playerToCode(action.game.winner) : 0
+    internal.alertMessage = action.game.alertMessage
+    internal.moveHistory = []
+    internal.gameMode = state.gameMode
+    internal.humanPlayer = state.humanPlayer ? playerToCode(state.humanPlayer) : 0
+    return toPublicState(internal)
   }
 
-  const player = state.currentPlayer
-  const board = state.board.map((rowCells) => [...rowCells])
-  board[row][col] = player
-  const tilesPlaced: Record<Player, number> = {
-    ...state.tilesPlaced,
-    [player]: state.tilesPlaced[player] + 1,
+  internal = fromPublicState(state)
+  const originalInternal = internal
+
+  switch (action.type) {
+    case 'RESET':
+      internal = createInternalState()
+      break
+
+    case 'START_AI':
+      internal = createInternalState()
+      internal.gameMode = 'ai'
+      internal.humanPlayer = playerToCode(action.human)
+      break
+
+    case 'PLACE':
+      internal = applyPlace(internal, action.row, action.col)
+      if (internal === originalInternal) internalUnchanged = true
+      break
+
+    case 'UNDO':
+      internal = applyUndo(internal)
+      if (internal === originalInternal) internalUnchanged = true
+      break
   }
+
+  if (internalUnchanged) return state
+  return toPublicState(internal)
+}
+
+function applyPlace(internal: InternalGameState, row: number, col: number): InternalGameState {
+  const idx = row * 11 + col
+  if (
+    internal.gameOver ||
+    internal.board[idx] !== 0 ||
+    internal.tilesPlaced[internal.currentPlayer - 1] >= MAX_TILES ||
+    !isCellPlayablePublic(internal.board, row, col, internal.currentPlayer, internal.gameOver)
+  ) {
+    return internal
+  }
+
+  const player = internal.currentPlayer
+  const board = cloneBoard(internal.board)
+  applyMove(board, idx, player)
+  const tilesPlaced: [number, number] = [
+    internal.tilesPlaced[0] + (player === 1 ? 1 : 0),
+    internal.tilesPlaced[1] + (player === 2 ? 1 : 0),
+  ]
   const lastMove = { row, col }
-  const moveHistory = [...state.moveHistory, { player, row, col }]
+  const moveHistory = [...internal.moveHistory, { player: codeToPlayer(player)!, row, col }]
 
   if (checkConnectionWin(board, player)) {
     return {
-      ...state,
+      ...internal,
       board,
       tilesPlaced,
       lastMove,
       moveHistory,
       gameOver: true,
       winner: player,
-      alertMessage: `${player.toUpperCase()} wins by Connection!`,
+      alertMessage: `${codeToPlayer(player)!.toUpperCase()} wins by Connection!`,
     }
   }
   if (checkSurroundWin(board, player)) {
     return {
-      ...state,
+      ...internal,
       board,
       tilesPlaced,
       lastMove,
       moveHistory,
       gameOver: true,
       winner: player,
-      alertMessage: `${player.toUpperCase()} wins by Boxing-In!`,
+      alertMessage: `${codeToPlayer(player)!.toUpperCase()} wins by Boxing-In!`,
     }
   }
-  if (tilesPlaced.red === MAX_TILES && tilesPlaced.white === MAX_TILES) {
+  if (tilesPlaced[0] === MAX_TILES && tilesPlaced[1] === MAX_TILES) {
     return {
-      ...state,
+      ...internal,
       board,
       tilesPlaced,
       lastMove,
       moveHistory,
       gameOver: true,
-      winner: null,
+      winner: 0,
       alertMessage: "It's a draw!",
     }
   }
   return {
-    ...state,
+    ...internal,
     board,
     tilesPlaced,
     lastMove,
     moveHistory,
-    currentPlayer: OPPONENT[player],
+    currentPlayer: player === 1 ? 2 : 1,
   }
 }
 
-function applyUndo(state: GameState): GameState {
+function isCellPlayablePublic(board: FlatBoard, row: number, col: number, player: PlayerCode, gameOver: boolean): boolean {
+  if (gameOver || board[row * 11 + col] !== 0) return false
+  if (player === 1) return col !== 0 && col !== 10
+  return row !== 0 && row !== 10
+}
+
+function applyUndo(internal: InternalGameState): InternalGameState {
   if (
-    state.gameMode !== 'ai' ||
-    state.humanPlayer === null ||
-    state.moveHistory.length === 0
+    internal.gameMode !== 'ai' ||
+    internal.humanPlayer === 0 ||
+    internal.moveHistory.length === 0
   ) {
-    return state
+    return internal
   }
 
-  const aiPlayer = OPPONENT[state.humanPlayer]
+  const aiPlayer = internal.humanPlayer === 1 ? 2 : 1
   const removed = new Set<number>()
   let aiFound = false
   let humanFound = false
-  for (let i = state.moveHistory.length - 1; i >= 0; i--) {
-    const move = state.moveHistory[i]
-    if (move.player === aiPlayer && !aiFound) {
+  for (let i = internal.moveHistory.length - 1; i >= 0; i--) {
+    const move = internal.moveHistory[i]
+    const movePlayer = playerToCode(move.player)
+    if (movePlayer === aiPlayer && !aiFound) {
       removed.add(i)
       aiFound = true
-    } else if (move.player === state.humanPlayer && !humanFound) {
+    } else if (movePlayer === internal.humanPlayer && !humanFound) {
       removed.add(i)
       humanFound = true
     }
     if (aiFound && humanFound) break
   }
 
-  const moveHistory = state.moveHistory.filter((_, i) => !removed.has(i))
-  const board = createBoard()
-  const tilesPlaced: Record<Player, number> = { red: 0, white: 0 }
+  const moveHistory = internal.moveHistory.filter((_, i) => !removed.has(i))
+  const board = createFlatBoard()
+  const tilesPlaced: [number, number] = [0, 0]
   for (const move of moveHistory) {
-    board[move.row][move.col] = move.player
-    tilesPlaced[move.player]++
+    const idx = move.row * 11 + move.col
+    const player = playerToCode(move.player)
+    applyMove(board, idx, player)
+    tilesPlaced[player - 1]++
   }
 
   return {
-    ...state,
+    ...internal,
     board,
     tilesPlaced,
-    currentPlayer: state.humanPlayer,
+    currentPlayer: internal.humanPlayer,
     gameOver: false,
-    winner: null,
+    winner: 0,
     lastMove: moveHistory.at(-1) ?? null,
     alertMessage: null,
     moveHistory,

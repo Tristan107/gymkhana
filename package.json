@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run --exclude src/game/tests/ai_v2.test.ts",
+    "test": "vitest run --exclude=src/game/tests/ai_v2.test.ts",
     "test:ai": "vitest run src/game/tests/ai_v2.test.ts",
     "test:all": "vitest run",
     "test:watch": "vitest",

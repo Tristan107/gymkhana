@@ -58,81 +58,87 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
       data-testid="dev-menu"
       aria-labelledby="dev-menu-title"
       onCancel={onClose}
-      className="fixed inset-0 m-auto max-w-[320px] w-fit flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl [font-family:Arial,sans-serif] backdrop:bg-black/60"
+      className="fixed inset-0 m-auto w-[320px] max-w-[90vw] flex flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl z-[100] [font-family:Arial,sans-serif] backdrop:bg-black/60"
     >
         <h2 id="dev-menu-title" className="m-0 text-center text-base font-bold text-[#fdfaf2]">
           Developer Menu
         </h2>
-        <div className="flex flex-col gap-3">
-          <label className="flex cursor-pointer items-center gap-2 text-[13px] font-bold text-[#ddd]">
-            <input
-              type="checkbox"
-              checked={showCoordinates}
-              onChange={onToggleCoordinates}
-              data-testid="dev-toggle-coordinates"
-              role="switch"
-              aria-label="Show coordinates"
-              className="h-4 w-4 cursor-pointer accent-[#f6b252]"
-            />
-            {' '}
-            Show coordinates
-          </label>
-          <button
-            type="button"
-            onClick={handleExport}
-            data-testid="dev-export"
-            className={`${buttonBase} border-none bg-[#f6b252] text-[#1a1a1a] hover:brightness-110`}
-          >
-            Export board
-          </button>
-          {copied && (
-            <p className="m-0 rounded-md border border-green-400/40 bg-[#0f2a12] px-3 py-2 text-[13px] font-bold text-[#99ff99]">
-              Board copied to clipboard!
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={handleToggleImport}
-            data-testid="dev-import"
-            className={`${buttonBase} border-none bg-[#e0e0e0] text-[#333] hover:bg-[#c8c8c8]`}
-          >
-            Import board
-          </button>
-          {importOpen && (
-            <>
-              <textarea
-                value={pasteText}
-                onChange={(event) => setPasteText(event.target.value)}
-                rows={10}
-                spellCheck={false}
-                data-testid="dev-import-textarea"
-                aria-label="Board data to import"
-                className="w-full resize-y rounded-md border border-white/20 bg-[#0d0d0d] p-2 text-[12px] text-[#fdfaf2] outline-none focus:border-white/40 [font-family:monospace]"
+        <div className="flex flex-1 flex-col justify-between gap-4">
+          <div className="flex flex-col gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-[13px] font-bold text-[#ddd]">
+              <input
+                type="checkbox"
+                checked={showCoordinates}
+                onChange={onToggleCoordinates}
+                data-testid="dev-toggle-coordinates"
+                role="switch"
+                aria-label="Show coordinates"
+                className="h-4 w-4 cursor-pointer accent-[#f6b252]"
               />
-              <button
-                type="button"
-                onClick={handleImportPasted}
-                data-testid="dev-import-submit"
-                className={`${buttonBase} border-none bg-[#f6b252] text-[#1a1a1a] hover:brightness-110`}
-              >
-                Load board
-              </button>
-            </>
-          )}
+              {' '}
+              Show coordinates
+            </label>
+            <button
+              type="button"
+              onClick={handleExport}
+              data-testid="dev-export"
+              className={`${buttonBase} border-none bg-[#f6b252] text-[#1a1a1a] hover:brightness-110`}
+            >
+              Export board
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleImport}
+              data-testid="dev-import"
+              className={`${buttonBase} border-none bg-[#e0e0e0] text-[#333] hover:bg-[#c8c8c8]`}
+            >
+              Import board
+            </button>
+          </div>
+          <div className="flex flex-col gap-3">
+            {copied && (
+              <p className="m-0 rounded-md border border-green-400/40 bg-[#0f2a12] px-3 py-2 text-[13px] font-bold text-[#99ff99]">
+                Board copied to clipboard!
+              </p>
+            )}
+            {importOpen && (
+              <>
+                <textarea
+                  value={pasteText}
+                  onChange={(event) => setPasteText(event.target.value)}
+                  rows={10}
+                  spellCheck={false}
+                  data-testid="dev-import-textarea"
+                  aria-label="Board data to import"
+                  className="w-full resize-y rounded-md border border-white/20 bg-[#0d0d0d] p-2 text-[12px] text-[#fdfaf2] outline-none focus:border-white/40 [font-family:monospace]"
+                />
+                <button
+                  type="button"
+                  onClick={handleImportPasted}
+                  data-testid="dev-import-submit"
+                  className={`${buttonBase} border-none bg-[#f6b252] text-[#1a1a1a] hover:brightness-110`}
+                >
+                  Load board
+                </button>
+              </>
+            )}
+            {error !== null && (
+              <p className="m-0 rounded-md border border-red-400/40 bg-[#2a0f12] px-3 py-2 text-[13px] font-bold text-[#ff9999]">
+                {error}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              data-testid="dev-close"
+              className={`${buttonBase} border border-white/20 bg-transparent text-[#ccc] hover:bg-white/5`}
+            >
+              Close
+            </button>
+          </div>
         </div>
-        {error !== null && (
-          <p className="m-0 rounded-md border border-red-400/40 bg-[#2a0f12] px-3 py-2 text-[13px] font-bold text-[#ff9999]">
-            {error}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={onClose}
-          data-testid="dev-close"
-          className={`${buttonBase} border border-white/20 bg-transparent text-[#ccc] hover:bg-white/5`}
-        >
-          Close
-        </button>
     </dialog>
   )
 }

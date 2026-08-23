@@ -4,12 +4,14 @@ set -euo pipefail
 SONAR_HOST="${SONAR_HOST:-http://localhost:9000}"
 SONAR_TOKEN="${SONAR_TOKEN:?Set SONAR_TOKEN to your SonarQube token}"
 PROJECT_KEY="Gymkhana"
+PROJECT_VERSION=$(node -p "require('./package.json').version")
 MAX_WAIT=120
 
 sonar-scanner-npm \
   -Dsonar.host.url="$SONAR_HOST" \
   -Dsonar.token="$SONAR_TOKEN" \
-  -Dsonar.projectKey="$PROJECT_KEY"
+  -Dsonar.projectKey="$PROJECT_KEY" \
+  -Dsonar.projectVersion="$PROJECT_VERSION"
 
 TASK_ID="$(sed -n 's/^ceTaskId=//p' .scannerwork/report-task.txt)"
 if [ -z "$TASK_ID" ]; then

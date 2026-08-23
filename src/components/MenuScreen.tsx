@@ -72,7 +72,6 @@ function MenuScreen({ onPlayPvP, onPlayAI, onPlayOnline, onShowRules }: Readonly
         ref={sidePickerRef}
         onClose={() => setSidePickerOpen(false)}
         data-testid="side-picker"
-        role="dialog"
         aria-labelledby="side-picker-title"
         className="m-auto w-[calc(100%-32px)] max-w-xs rounded-lg border border-white/10 p-6 text-[#fdfaf2] shadow-2xl [font-family:Arial,sans-serif] [background:radial-gradient(circle,#152b3c_0%,#0b141d_100%)] backdrop:bg-black/60"
       >

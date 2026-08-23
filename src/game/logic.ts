@@ -13,6 +13,12 @@ import {
 
 export { toPublicBoardFlat as toPublicBoard, fromPublicBoardFlat as fromPublicBoard }
 
+function codeToPlayer(code: number): Player | null {
+  if (code === 1) return 'red'
+  if (code === 2) return 'white'
+  return null
+}
+
 export function createBoard(): Board {
   const flat = createFlatBoard()
   return toPublicBoardFlat(flat)
@@ -99,7 +105,7 @@ export function checkGameOverPublic(board: Board, tilesRed: number, tilesWhite: 
   const result = checkGameOver(flat, tilesRed, tilesWhite)
   return {
     gameOver: result.gameOver,
-    winner: result.winner === 1 ? 'red' : result.winner === 2 ? 'white' : null,
+    winner: codeToPlayer(result.winner),
     reason: result.reason,
   }
 }

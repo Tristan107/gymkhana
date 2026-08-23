@@ -11,7 +11,7 @@ const IMG_CLASS = 'w-full rounded border border-white/10'
 
 function RulesScreen({ onBack }: Readonly<RulesScreenProps>) {
   return (
-    <div data-testid="rules-screen" role="main" className="box-border flex min-h-screen flex-col items-center p-5">
+    <main data-testid="rules-screen" className="box-border flex min-h-screen flex-col items-center p-5">
       <div className="flex w-full max-w-[1100px] items-center justify-end">
         <button
           type="button"
@@ -57,7 +57,7 @@ function RulesScreen({ onBack }: Readonly<RulesScreenProps>) {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 

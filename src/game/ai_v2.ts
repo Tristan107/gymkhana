@@ -14,6 +14,14 @@ export interface Move {
   col: number
 }
 
+interface MoveScores {
+  connect: number
+  oppConnect: number
+  zigzag: number
+  health: number
+  box: number
+}
+
 const INF = 9999
 
 const EVAL_BOARD = new Uint8Array(CELL_COUNT)
@@ -120,8 +128,8 @@ function copyComp(src: number[], dst: number[]): void {
 function openNeighborsInto(board: Uint8Array, cells: number[], out: number[]): number {
   out.length = 0
   const gen = nextGen()
-  for (let i = 0; i < cells.length; i++) {
-    const neighbors = NEIGHBORS[cells[i]]
+  for (const cellIdx of cells) {
+    const neighbors = NEIGHBORS[cellIdx]
     for (let d = 0; d < 4; d++) {
       const n = neighbors[d]
       if (n === -1 || board[n] !== CELL.EMPTY || SEEN[n] === gen) continue
@@ -270,8 +278,7 @@ function findForkMove(
   let general = -1
   let bestGenWins = -1
   let bestGenThreat = -1
-  for (let i = 0; i < LEGAL.length; i++) {
-    const move = LEGAL[i]
+  for (const move of LEGAL) {
     if (!hasAdjacentToken(board, move)) continue
     applyMove(board, move, player)
     const w = winningMovesCount(board, player)
@@ -354,14 +361,13 @@ function buildForkCandidatesImmediate(
   defender: 1 | 2
 ): void {
   COVERAGE.fill(0)
-  for (let i = 0; i < wins.length; i++) {
-    const nSupport = boxSupportCells(boardAfterFork, wins[i], attacker, defender)
+  for (const win of wins) {
+    const nSupport = boxSupportCells(boardAfterFork, win, attacker, defender)
     for (let j = 0; j < nSupport; j++) COVERAGE[SUPPORT[j]]++
   }
   CANDIDATE_BUF.length = 0
   CANDIDATE_SCORE.length = 0
-  for (let i = 0; i < legal.length; i++) {
-    const move = legal[i]
+  for (const move of legal) {
     if (COVERAGE[move] >= 1) {
       CANDIDATE_BUF.push(move)
       CANDIDATE_SCORE.push(COVERAGE[move])
@@ -413,8 +419,7 @@ function pickBestForkBlock(
 ): number {
   let bestMove = -1
   let bestHealth = INF
-  for (let i = 0; i < CANDIDATE_BUF.length; i++) {
-    const move = CANDIDATE_BUF[i]
+  for (const move of CANDIDATE_BUF) {
     applyMove(board, move, defender)
     if (
       winningMovesCount(board, attacker) === 0 &&
@@ -431,6 +436,30 @@ function pickBestForkBlock(
   return bestMove
 }
 
+function evaluateForkQualifies(
+  board: Uint8Array,
+  fork: number,
+  attacker: 1 | 2,
+  defender: 1 | 2,
+  legal: number[],
+  mode: 'immediate' | 'general'
+): boolean {
+  const nWins = winningMovesInto(board, attacker, WINS_LIST)
+  if (mode === 'immediate') {
+    if (nWins >= 2) {
+      buildForkCandidatesImmediate(board, fork, WINS_LIST, legal, attacker, defender)
+      return true
+    }
+    return false
+  }
+  const nThreatened = collectThreatened(board, defender, attacker)
+  if (nWins >= 1 || nThreatened >= 2) {
+    buildForkCandidatesGeneral(board, fork, nThreatened, defender)
+    return true
+  }
+  return false
+}
+
 function findForkBlockMode(
   board: Uint8Array,
   legal: number[],
@@ -444,20 +473,7 @@ function findForkBlockMode(
     const fork = OPP_MOVES[fi]
     if (!hasAdjacentToken(board, fork)) continue
     applyMove(board, fork, attacker)
-    const nWins = winningMovesInto(board, attacker, WINS_LIST)
-    let qualifies: boolean
-    if (mode === 'immediate') {
-      qualifies = nWins >= 2
-      if (qualifies) {
-        buildForkCandidatesImmediate(board, fork, WINS_LIST, legal, attacker, defender)
-      }
-    } else {
-      const nThreatened = collectThreatened(board, defender, attacker)
-      qualifies = nWins >= 1 || nThreatened >= 2
-      if (qualifies) {
-        buildForkCandidatesGeneral(board, fork, nThreatened, defender)
-      }
-    }
+    const qualifies = evaluateForkQualifies(board, fork, attacker, defender, legal, mode)
     undoMove(board, fork)
     if (qualifies) {
       const bestMove = pickBestForkBlock(board, fork, attacker, defender)
@@ -536,10 +552,7 @@ function edgeWeight(board: Uint8Array, color: 1 | 2, idx: number): number {
   return owned(cell, color) ? 0 : 1
 }
 
-function tilesToConnect(board: Uint8Array, color: 1 | 2): number {
-  const horizontal = color === 2
-  DIST.fill(INF)
-  DEQUE.length = 0
+function seedStartEdges(board: Uint8Array, color: 1 | 2, horizontal: boolean): void {
   for (let i = 0; i < BOARD_SIZE; i++) {
     const idx = horizontal ? i * BOARD_SIZE : i
     const weight = edgeWeight(board, color, idx)
@@ -548,28 +561,42 @@ function tilesToConnect(board: Uint8Array, color: 1 | 2): number {
     if (weight === 0) DEQUE.unshift(idx)
     else DEQUE.push(idx)
   }
-  while (DEQUE.length > 0) {
-    const idx = DEQUE.shift() as number
-    const base = DIST[idx]
-    const neighbors = NEIGHBORS[idx]
-    for (let d = 0; d < 4; d++) {
-      const n = neighbors[d]
-      if (n === -1) continue
-      const weight = edgeWeight(board, color, n)
-      if (weight < 0) continue
-      if (base + weight < DIST[n]) {
-        DIST[n] = base + weight
-        if (weight === 0) DEQUE.unshift(n)
-        else DEQUE.push(n)
-      }
+}
+
+function relaxNeighbors(board: Uint8Array, color: 1 | 2, idx: number, base: number): void {
+  const neighbors = NEIGHBORS[idx]
+  for (let d = 0; d < 4; d++) {
+    const n = neighbors[d]
+    if (n === -1) continue
+    const weight = edgeWeight(board, color, n)
+    if (weight < 0) continue
+    if (base + weight < DIST[n]) {
+      DIST[n] = base + weight
+      if (weight === 0) DEQUE.unshift(n)
+      else DEQUE.push(n)
     }
   }
+}
+
+function minEndEdgeDistance(horizontal: boolean): number {
   let minimum = INF
   for (let i = 0; i < BOARD_SIZE; i++) {
     const idx = horizontal ? i * BOARD_SIZE + BOARD_SIZE - 1 : (BOARD_SIZE - 1) * BOARD_SIZE + i
     if (DIST[idx] < minimum) minimum = DIST[idx]
   }
   return minimum
+}
+
+function tilesToConnect(board: Uint8Array, color: 1 | 2): number {
+  const horizontal = color === 2
+  DIST.fill(INF)
+  DEQUE.length = 0
+  seedStartEdges(board, color, horizontal)
+  while (DEQUE.length > 0) {
+    const idx = DEQUE.shift() as number
+    relaxNeighbors(board, color, idx, DIST[idx])
+  }
+  return minEndEdgeDistance(horizontal)
 }
 
 function axisAdjacency(board: Uint8Array, color: 1 | 2): number {
@@ -632,14 +659,14 @@ function markActiveCells(board: Uint8Array, color: 1 | 2): void {
   for (let i = 0; i < n; i++) {
     const cells = COMPS[i]
     let hasPlaced = false
-    for (let j = 0; j < cells.length; j++) {
-      if (!FIXED_PEG_MASK[cells[j]]) {
+    for (const cell of cells) {
+      if (!FIXED_PEG_MASK[cell]) {
         hasPlaced = true
         break
       }
     }
     if (!hasPlaced) continue
-    for (let j = 0; j < cells.length; j++) ACTIVE[cells[j]] = 1
+    for (const cell of cells) ACTIVE[cell] = 1
   }
 }
 
@@ -666,12 +693,9 @@ function isImminentBoxLiberty(board: Uint8Array, move: number, player: 1 | 2): b
   return false
 }
 
-function pickBestStrategic(board: Uint8Array, player: 1 | 2): number {
-  const opponent = other(player)
-
+function buildStrategicPool(board: Uint8Array, player: 1 | 2): number[] {
   CANDIDATE_BUF.length = 0
-  for (let i = 0; i < LEGAL.length; i++) {
-    const move = LEGAL[i]
+  for (const move of LEGAL) {
     if (!onHomeLane(move, player) || isImminentBoxLiberty(board, move, player)) {
       CANDIDATE_BUF.push(move)
     }
@@ -680,67 +704,66 @@ function pickBestStrategic(board: Uint8Array, player: 1 | 2): number {
   markActiveCells(board, player)
   const base = CANDIDATE_BUF.length > 0 ? CANDIDATE_BUF : LEGAL
   BEST_MOVES.length = 0
-  for (let i = 0; i < base.length; i++) {
-    if (isNearActive(base[i])) BEST_MOVES.push(base[i])
+  for (const move of base) {
+    if (isNearActive(move)) BEST_MOVES.push(move)
   }
-  const pool = BEST_MOVES.length > 0 ? BEST_MOVES : base
+  return BEST_MOVES.length > 0 ? BEST_MOVES : base
+}
 
-  let bestConnect = INF
-  let bestOppConnect = -INF
-  let bestZigzag = INF
-  let bestHealth = INF
-  let bestBox = INF
+function isBetterMove(scores: MoveScores, best: MoveScores): boolean {
+  if (scores.connect < best.connect) return true
+  if (scores.connect > best.connect) return false
+  if (scores.oppConnect > best.oppConnect) return true
+  if (scores.oppConnect < best.oppConnect) return false
+  if (scores.zigzag < best.zigzag) return true
+  if (scores.zigzag > best.zigzag) return false
+  if (scores.health < best.health) return true
+  if (scores.health > best.health) return false
+  return scores.box < best.box
+}
+
+function isTiedMove(scores: MoveScores, best: MoveScores): boolean {
+  return scores.connect === best.connect
+    && scores.oppConnect === best.oppConnect
+    && scores.zigzag === best.zigzag
+    && scores.health === best.health
+    && scores.box === best.box
+}
+
+function pickBestStrategic(board: Uint8Array, player: 1 | 2): number {
+  const opponent = other(player)
+  const pool = buildStrategicPool(board, player)
+
+  let best: MoveScores = { connect: INF, oppConnect: -INF, zigzag: INF, health: INF, box: INF }
   let hasBest = false
   const tiedMoves: number[] = []
 
-  for (let i = 0; i < pool.length; i++) {
-    const move = pool[i]
+  for (const move of pool) {
     applyMove(board, move, player)
-    const connect = tilesToConnect(board, player)
-    const oppConnect = tilesToConnect(board, opponent)
-    const zigzag = axisAdjacency(board, player)
-    const health = countVulnerableChains(board, player, opponent)
-    const box = boxInTilesNeeded(board, player)
+    const scores: MoveScores = {
+      connect: tilesToConnect(board, player),
+      oppConnect: tilesToConnect(board, opponent),
+      zigzag: axisAdjacency(board, player),
+      health: countVulnerableChains(board, player, opponent),
+      box: boxInTilesNeeded(board, player),
+    }
     undoMove(board, move)
 
     if (!hasBest) {
       hasBest = true
-      bestConnect = connect
-      bestOppConnect = oppConnect
-      bestZigzag = zigzag
-      bestHealth = health
-      bestBox = box
+      best = scores
       tiedMoves.push(move)
-    } else if (
-      connect < bestConnect ||
-      (connect === bestConnect &&
-        (oppConnect > bestOppConnect ||
-          (oppConnect === bestOppConnect &&
-            (zigzag < bestZigzag ||
-              (zigzag === bestZigzag &&
-                (health < bestHealth ||
-                  (health === bestHealth && box < bestBox)))))))
-    ) {
-      bestConnect = connect
-      bestOppConnect = oppConnect
-      bestZigzag = zigzag
-      bestHealth = health
-      bestBox = box
+    } else if (isBetterMove(scores, best)) {
+      best = scores
       tiedMoves.length = 0
       tiedMoves.push(move)
-    } else if (
-      connect === bestConnect &&
-      oppConnect === bestOppConnect &&
-      zigzag === bestZigzag &&
-      health === bestHealth &&
-      box === bestBox
-    ) {
+    } else if (isTiedMove(scores, best)) {
       tiedMoves.push(move)
     }
   }
 
   if (tiedMoves.length === 0) return pool[0]
-  return tiedMoves[Math.floor(Math.random() * tiedMoves.length)]
+  return tiedMoves[Math.floor(Math.random() * tiedMoves.length)] // NOSONAR: non-security tie-break in game AI
 }
 
 function playerToCode(player: Player): 1 | 2 {
@@ -754,8 +777,7 @@ function idxToMove(idx: number): Move {
 
 function openingMoves(board: Uint8Array, player: 1 | 2): number[] {
   const result: number[] = []
-  for (let i = 0; i < LEGAL.length; i++) {
-    const move = LEGAL[i]
+  for (const move of LEGAL) {
     if (onHomeLane(move, player)) continue
     const neighbors = NEIGHBORS[move]
     let adjacentToEdgeToken = false
@@ -790,7 +812,7 @@ export function chooseMove(
 
   if (tilesPlaced[player] === 0) {
     const opening = openingMoves(EVAL_BOARD, pCode)
-    return idxToMove(opening[Math.floor(Math.random() * opening.length)])
+    return idxToMove(opening[Math.floor(Math.random() * opening.length)]) // NOSONAR: non-security tie-break in game AI
   }
 
   const nOwnWins = winningMovesInto(EVAL_BOARD, pCode, WINS_LIST)

@@ -39,7 +39,7 @@ function GameOverOverlay({
   else if (winner === null) accent = 'text-[#ccc]'
 
   return (
-    <div data-testid="game-over-overlay" role="dialog" aria-modal="true" aria-labelledby="game-over-message" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-md bg-black/70 backdrop-blur-sm">
+    <dialog open data-testid="game-over-overlay" aria-labelledby="game-over-message" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-md bg-black/70 backdrop-blur-sm">
       <button
         type="button"
         onClick={() => setDismissed(true)}
@@ -66,7 +66,7 @@ function GameOverOverlay({
           {rematchLabel}
         </button>
       )}
-    </div>
+    </dialog>
   )
 }
 

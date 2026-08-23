@@ -51,7 +51,7 @@ function GameScreen({
   showCoordinates = false,
 }: Readonly<GameScreenProps>) {
   return (
-    <div data-testid="game-screen" role="main" className="flex min-h-screen flex-col items-center p-5 box-border">
+    <main data-testid="game-screen" className="flex min-h-screen flex-col items-center p-5 box-border">
       <Header />
 
       <div className="flex w-full max-w-[1100px] flex-col items-center gap-10 min-[901px]:flex-row min-[901px]:items-start min-[901px]:justify-center">
@@ -142,7 +142,7 @@ function GameScreen({
           </div>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 

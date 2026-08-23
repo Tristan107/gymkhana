@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { ParseResult } from '../game/boardFile'
 
 interface DevMenuProps {
@@ -17,6 +17,17 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    const el = dialogRef.current
+    if (!el) return undefined
+    const handleClick = (e: MouseEvent) => {
+      if (e.target === el) onClose()
+    }
+    el.addEventListener('click', handleClick)
+    return () => el.removeEventListener('click', handleClick)
+  }, [onClose])
 
   const handleExport = () => {
     setCopied(false)
@@ -41,14 +52,14 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        data-testid="dev-backdrop"
-        aria-label="Close developer menu"
-        className="absolute inset-0 bg-black/60"
-        onClick={onClose}
-      />
-      <div data-testid="dev-menu" role="dialog" aria-labelledby="dev-menu-title" className="relative flex w-[320px] flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl [font-family:Arial,sans-serif]">
+    <dialog
+      ref={dialogRef}
+      open
+      data-testid="dev-menu"
+      aria-labelledby="dev-menu-title"
+      onCancel={onClose}
+      className="fixed inset-0 m-auto max-w-[320px] w-fit flex-col gap-4 rounded-lg border border-white/20 bg-[#151515] p-6 shadow-xl [font-family:Arial,sans-serif] backdrop:bg-black/60"
+    >
         <h2 id="dev-menu-title" className="m-0 text-center text-base font-bold text-[#fdfaf2]">
           Developer Menu
         </h2>
@@ -122,8 +133,7 @@ function DevMenu({ onExport, onImportText, onClose, showCoordinates, onToggleCoo
         >
           Close
         </button>
-      </div>
-    </div>
+    </dialog>
   )
 }
 

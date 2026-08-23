@@ -1,9 +1,8 @@
 import { MAX_TILES } from '../constants'
-import type { Board, Player } from '../types'
+import type { Board, Player, FlatBoard, PlayerCode } from '../types'
 import type { ParsedGame } from './boardFile'
 import { createBoard, toPublicBoard, fromPublicBoard } from './logic'
 import { createFlatBoard, cloneBoard, applyMove, checkConnectionWin, checkSurroundWin } from './flatBoard'
-import type { FlatBoard, PlayerCode } from '../types'
 
 export interface MoveRecord {
   player: Player
@@ -49,7 +48,9 @@ function playerToCode(player: Player): PlayerCode {
 }
 
 function codeToPlayer(code: PlayerCode): Player | null {
-  return code === 1 ? 'red' : code === 2 ? 'white' : null
+  if (code === 1) return 'red'
+  if (code === 2) return 'white'
+  return null
 }
 
 export const initialState: GameState = createInitialState()
@@ -89,12 +90,12 @@ function toPublicState(internal: InternalGameState): GameState {
     board: toPublicBoard(internal.board),
     currentPlayer: internal.currentPlayer === 1 ? 'red' : 'white',
     gameOver: internal.gameOver,
-    winner: internal.winner === 1 ? 'red' : internal.winner === 2 ? 'white' : null,
+    winner: codeToPlayer(internal.winner),
     tilesPlaced: { red: internal.tilesPlaced[0], white: internal.tilesPlaced[1] },
     lastMove: internal.lastMove,
     alertMessage: internal.alertMessage,
     gameMode: internal.gameMode,
-    humanPlayer: internal.humanPlayer === 1 ? 'red' : internal.humanPlayer === 2 ? 'white' : null,
+    humanPlayer: codeToPlayer(internal.humanPlayer),
     moveHistory: internal.moveHistory,
   }
 }

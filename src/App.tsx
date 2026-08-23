@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import DevMenu from './components/DevMenu'
 import GameScreen from './components/GameScreen'
 import MenuScreen from './components/MenuScreen'
@@ -15,6 +15,8 @@ import type { Player } from './types'
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, initialState)
+  const stateRef = useRef(state)
+  stateRef.current = state
   const [screen, setScreen] = useState<'menu' | 'online' | 'game'>('menu')
   const [rulesScreen, setRulesScreen] = useState(false)
   const [onlineSession, setOnlineSession] = useState<{ code: string; myColor: Player } | null>(
@@ -43,24 +45,17 @@ function App() {
     if (!isAiTurn || state.humanPlayer === null) return
     const aiPlayer = OPPONENT[state.humanPlayer]
     const timeout = setTimeout(() => {
+      const currentState = stateRef.current
       const move = chooseMove(
-        state.board,
+        currentState.board,
         aiPlayer,
-        state.tilesPlaced,
-        state.gameOver
+        currentState.tilesPlaced,
+        currentState.gameOver
       )
       if (move) dispatch({ type: 'PLACE', row: move.row, col: move.col })
     }, 400)
     return () => clearTimeout(timeout)
-  }, [
-    isAiTurn,
-    state.board,
-    state.currentPlayer,
-    state.gameMode,
-    state.gameOver,
-    state.humanPlayer,
-    state.tilesPlaced,
-  ])
+  }, [isAiTurn, state.humanPlayer])
 
   const handleOnlineGameReady = useCallback((code: string, myColor: Player) => {
     setOnlineSession({ code, myColor })

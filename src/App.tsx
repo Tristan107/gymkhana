@@ -8,8 +8,10 @@ import RulesScreen from './components/RulesScreen'
 import { boardToText, parseBoardText } from './game/boardFile'
 import type { ParseResult } from './game/boardFile'
 import { gameReducer, initialState } from './game/reducer'
-import { chooseMove } from './game/ai_v2'
+import { chooseMove, setMCTSDifficulty } from './game/ai_mcts'
 import { OPPONENT } from './constants'
+
+setMCTSDifficulty('hard')
 import { getPlayerId, getRoomCodeFromUrl, clearRoomCodeFromUrl } from './firebase/id'
 import type { Player } from './types'
 

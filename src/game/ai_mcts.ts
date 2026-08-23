@@ -736,6 +736,8 @@ function createRng(seed: number): () => number {
   }
 }
 
+type Outcome = 0 | 1 | 2
+
 interface MCTSNode {
   parent: MCTSNode | null
   moveIdx: number
@@ -745,7 +747,7 @@ interface MCTSNode {
   visits: number
   wins: number
   terminal: boolean
-  winner: 0 | 1 | 2
+  winner: Outcome
   children: MCTSNode[]
   unvisited: number[]
 }
@@ -789,34 +791,47 @@ const GUIDED_ANY_ADJ: number[] = []
 
 function pickGuidedMove(board: Uint8Array, p: 1 | 2, nMoves: number, rng: () => number): number {
   const fixedCodeP = fixedCode(p)
-  const fixedCodeO = fixedCode(other(p))
   GUIDED_OWN_ADJ.length = 0
   GUIDED_ANY_ADJ.length = 0
   for (let i = 0; i < nMoves; i++) {
     const m = ROLLOUT_MOVES[i]
-    const neighbors = NEIGHBORS[m]
-    let ownAdj = false
-    let anyAdj = false
-    for (let d = 0; d < 4; d++) {
-      const nb = neighbors[d]
-      if (nb === -1) continue
-      const cell = board[nb]
-      if (cell !== CELL.EMPTY) {
-        anyAdj = true
-        if (cell === p || cell === fixedCodeP) ownAdj = true
-        else if (cell !== fixedCodeO) anyAdj = true
-      }
-    }
-    if (ownAdj) GUIDED_OWN_ADJ.push(m)
-    else if (anyAdj) GUIDED_ANY_ADJ.push(m)
+    const kind = classifyAdjacency(board, m, p, fixedCodeP)
+    if (kind === 'own') GUIDED_OWN_ADJ.push(m)
+    else if (kind === 'any') GUIDED_ANY_ADJ.push(m)
   }
-  if (GUIDED_OWN_ADJ.length > 0) {
-    return GUIDED_OWN_ADJ[(rng() * GUIDED_OWN_ADJ.length) | 0]
+  let pool: number[] | null = null
+  if (GUIDED_OWN_ADJ.length > 0) pool = GUIDED_OWN_ADJ
+  else if (GUIDED_ANY_ADJ.length > 0) pool = GUIDED_ANY_ADJ
+  return pickRandom(pool, rng, nMoves)
+}
+
+type AdjacencyKind = 'own' | 'any' | null
+
+function classifyAdjacency(
+  board: Uint8Array,
+  m: number,
+  p: 1 | 2,
+  fixedCodeP: number
+): AdjacencyKind {
+  const neighbors = NEIGHBORS[m]
+  let own = false
+  let any = false
+  for (let d = 0; d < 4; d++) {
+    const nb = neighbors[d]
+    if (nb === -1) continue
+    const cell = board[nb]
+    if (cell === CELL.EMPTY) continue
+    any = true
+    if (cell === p || cell === fixedCodeP) own = true
   }
-  if (GUIDED_ANY_ADJ.length > 0) {
-    return GUIDED_ANY_ADJ[(rng() * GUIDED_ANY_ADJ.length) | 0]
-  }
-  return ROLLOUT_MOVES[(rng() * nMoves) | 0]
+  if (own) return 'own'
+  if (any) return 'any'
+  return null
+}
+
+function pickRandom(list: number[] | null, rng: () => number, fallbackCount: number): number {
+  if (list === null) return ROLLOUT_MOVES[Math.trunc(rng() * fallbackCount)]
+  return list[Math.trunc(rng() * list.length)]
 }
 
 function rollout(
@@ -827,7 +842,7 @@ function rollout(
   startDepth: number,
   heuristicPlies: number,
   rng: () => number
-): 0 | 1 | 2 {
+): Outcome {
   let p = player
   let tr = tilesRed
   let tw = tilesWhite
@@ -837,7 +852,7 @@ function rollout(
     const nMoves = getValidMoves(board, p, ROLLOUT_MOVES)
     if (nMoves === 0) return 0
     const move =
-      depth < heuristicPlies ? pickGuidedMove(board, p, nMoves, rng) : ROLLOUT_MOVES[(rng() * nMoves) | 0]
+      depth < heuristicPlies ? pickGuidedMove(board, p, nMoves, rng) : ROLLOUT_MOVES[Math.trunc(rng() * nMoves)]
     applyMove(board, move, p)
     if (checkConnectionWin(board, p) || checkSurroundWin(board, p)) return p
     if (p === 1) tr++
@@ -864,7 +879,7 @@ function selectChild(node: MCTSNode, explorationConstant: number): MCTSNode {
   return best
 }
 
-function backpropagate(node: MCTSNode, winner: 0 | 1 | 2): void {
+function backpropagate(node: MCTSNode, winner: Outcome): void {
   let current: MCTSNode | null = node
   while (current !== null) {
     current.visits++
@@ -875,6 +890,143 @@ function backpropagate(node: MCTSNode, winner: 0 | 1 | 2): void {
     }
     current = current.parent
   }
+}
+
+const MAX_NODES = 200000
+
+function initRootNode(player: 1 | 2): MCTSNode {
+  const root = acquireNode()
+  root.parent = null
+  root.moveIdx = -1
+  root.player = player
+  root.depth = 0
+  root.visits = 0
+  root.wins = 0
+  root.terminal = false
+  root.winner = 0
+  root.children.length = 0
+  root.unvisited.length = 0
+  return root
+}
+
+function computePriorMeans(player: 1 | 2): void {
+  PRIOR_MEAN.fill(0.3)
+  const ranked = strategicRanking(ROOT_BOARD, player)
+  const nRanked = ranked.length
+  for (let i = 0; i < nRanked; i++) {
+    PRIOR_MEAN[ranked[i]] = 0.8 - 0.55 * (i / Math.max(1, nRanked - 1))
+  }
+}
+
+function createChild(node: MCTSNode): MCTSNode {
+  const move = node.unvisited.pop() as number
+  applyMove(SCRATCH_BOARD, move, node.player)
+  const child = acquireNode()
+  child.parent = node
+  child.moveIdx = move
+  child.movePlayer = node.player
+  child.player = other(node.player)
+  child.depth = node.depth + 1
+  child.visits = PRIOR_VISITS
+  child.wins = PRIOR_VISITS * PRIOR_MEAN[move]
+  child.children.length = 0
+  child.unvisited.length = 0
+  child.terminal = false
+  child.winner = 0
+  node.children.push(child)
+  return child
+}
+
+function settleChild(child: MCTSNode, player: 1 | 2, tr: number, tw: number): number {
+  let tilesRed = tr
+  let tilesWhite = tw
+  if (checkConnectionWin(SCRATCH_BOARD, player) || checkSurroundWin(SCRATCH_BOARD, player)) {
+    child.terminal = true
+    child.winner = player
+  } else if (player === 1) {
+    tilesRed++
+    if (tilesRed >= MAX_TILES && tilesWhite >= MAX_TILES) child.terminal = true
+  } else {
+    tilesWhite++
+    if (tilesRed >= MAX_TILES && tilesWhite >= MAX_TILES) child.terminal = true
+  }
+
+  const key = hashBoard(SCRATCH_BOARD, child.player)
+  const entry = transpositionTable.get(key)
+  if (entry !== undefined && !child.terminal) {
+    child.visits = entry.v
+    child.wins = entry.w
+  }
+  return key
+}
+
+function expandAndRollout(
+  node: MCTSNode,
+  heuristicPlies: number,
+  rng: () => number,
+  tilesRed: number,
+  tilesWhite: number
+): { node: MCTSNode; winner: Outcome; key: number } {
+  const child = createChild(node)
+  const key = settleChild(child, node.player, tilesRed, tilesWhite)
+  let tr = tilesRed
+  let tw = tilesWhite
+  if (node.player === 1) tr++
+  else tw++
+
+  const winner = child.terminal
+    ? child.winner
+    : rollout(SCRATCH_BOARD, child.player, tr, tw, child.depth, heuristicPlies, rng)
+
+  return { node: child, winner, key }
+}
+
+function runIteration(
+  root: MCTSNode,
+  explorationConstant: number,
+  heuristicPlies: number,
+  rng: () => number,
+  tilesRed: number,
+  tilesWhite: number
+): { node: MCTSNode; winner: Outcome; key: number } {
+  SCRATCH_BOARD.set(ROOT_BOARD)
+  let node = root
+  let tr = tilesRed
+  let tw = tilesWhite
+
+  while (!node.terminal && node.unvisited.length === 0 && node.children.length > 0) {
+    node = selectChild(node, explorationConstant)
+    applyMove(SCRATCH_BOARD, node.moveIdx, node.movePlayer)
+    if (node.movePlayer === 1) tr++
+    else tw++
+  }
+
+  if (node.terminal) return { node, winner: node.winner, key: -1 }
+  if (node.unvisited.length > 0 && nodePoolSize < MAX_NODES) {
+    return expandAndRollout(node, heuristicPlies, rng, tr, tw)
+  }
+  return { node, winner: 0, key: -1 }
+}
+
+function storeInTable(key: number, node: MCTSNode): void {
+  if (transpositionTable.size >= TT_MAX_ENTRIES) {
+    transpositionTable.delete(transpositionTable.keys().next().value as number)
+  }
+  transpositionTable.set(key, { v: node.visits, w: node.wins })
+}
+
+function pickBestChild(root: MCTSNode): number {
+  let bestChild: MCTSNode | null = null
+  for (const child of root.children) {
+    if (
+      bestChild === null ||
+      child.visits > bestChild.visits ||
+      (child.visits === bestChild.visits && child.wins > bestChild.wins)
+    ) {
+      bestChild = child
+    }
+  }
+  return bestChild === null ? -1 : bestChild.moveIdx
 }
 
 function runMCTS(board: Uint8Array, player: 1 | 2, tilesRed: number, tilesWhite: number): number {
@@ -888,120 +1040,34 @@ function runMCTS(board: Uint8Array, player: 1 | 2, tilesRed: number, tilesWhite:
   transpositionTable.clear()
   nodePoolSize = 0
 
-  const root = acquireNode()
-  root.parent = null
-  root.moveIdx = -1
-  root.player = player
-  root.depth = 0
-  root.visits = 0
-  root.wins = 0
-  root.terminal = false
-  root.winner = 0
-  root.children.length = 0
-  root.unvisited.length = 0
-
-  PRIOR_MEAN.fill(0.3)
-  const ranked = strategicRanking(ROOT_BOARD, player)
-  const nRanked = ranked.length
-  for (let i = 0; i < nRanked; i++) {
-    PRIOR_MEAN[ranked[i]] = 0.8 - 0.55 * (i / Math.max(1, nRanked - 1))
-  }
-  root.unvisited.length = 0
+  const root = initRootNode(player)
+  computePriorMeans(player)
   for (let i = 0; i < nLegal; i++) root.unvisited.push(TMP_MOVES_A[i])
   root.unvisited.sort((a, b) => PRIOR_MEAN[a] - PRIOR_MEAN[b])
 
   const deterministic = Number.isFinite(cfg.maxTimeMs) === false
   const startTime = Date.now()
-  const maxNodes = 200000
 
   let iterations = 0
   while (iterations < cfg.maxIterations) {
     if (!deterministic && (iterations & 31) === 31 && Date.now() - startTime >= cfg.maxTimeMs) break
 
-    SCRATCH_BOARD.set(ROOT_BOARD)
-    let node = root
-    let tr = tilesRed
-    let tw = tilesWhite
-
-    while (!node.terminal && node.unvisited.length === 0 && node.children.length > 0) {
-      node = selectChild(node, cfg.explorationConstant)
-      applyMove(SCRATCH_BOARD, node.moveIdx, node.movePlayer)
-      if (node.movePlayer === 1) tr++
-      else tw++
-    }
-
-    let winner: 0 | 1 | 2
-    let expandedKey = -1
-    if (node.terminal) {
-      winner = node.winner
-    } else if (node.unvisited.length > 0 && nodePoolSize < maxNodes) {
-      const move = node.unvisited.pop() as number
-      applyMove(SCRATCH_BOARD, move, node.player)
-      const child = acquireNode()
-      child.parent = node
-      child.moveIdx = move
-      child.movePlayer = node.player
-      child.player = other(node.player)
-      child.depth = node.depth + 1
-      child.visits = PRIOR_VISITS
-      child.wins = PRIOR_VISITS * PRIOR_MEAN[move]
-      child.children.length = 0
-      child.unvisited.length = 0
-      child.terminal = false
-      child.winner = 0
-      node.children.push(child)
-
-      if (checkConnectionWin(SCRATCH_BOARD, node.player) || checkSurroundWin(SCRATCH_BOARD, node.player)) {
-        child.terminal = true
-        child.winner = node.player
-      } else if (node.player === 1) {
-        tr++
-        if (tr >= MAX_TILES && tw >= MAX_TILES) child.terminal = true
-      } else {
-        tw++
-        if (tr >= MAX_TILES && tw >= MAX_TILES) child.terminal = true
-      }
-
-      const key = hashBoard(SCRATCH_BOARD, child.player)
-      expandedKey = key
-      const entry = transpositionTable.get(key)
-      if (entry !== undefined && !child.terminal) {
-        child.visits = entry.v
-        child.wins = entry.w
-      }
-
-      winner = child.terminal
-        ? child.winner
-        : rollout(SCRATCH_BOARD, child.player, tr, tw, child.depth, cfg.heuristicPlies, rng)
-
-      node = child
-    } else {
-      winner = 0
-    }
+    const { node, winner, key } = runIteration(
+      root,
+      cfg.explorationConstant,
+      cfg.heuristicPlies,
+      rng,
+      tilesRed,
+      tilesWhite
+    )
 
     backpropagate(node, winner)
-
-    if (expandedKey >= 0) {
-      if (transpositionTable.size >= TT_MAX_ENTRIES) {
-        transpositionTable.delete(transpositionTable.keys().next().value as number)
-      }
-      transpositionTable.set(expandedKey, { v: node.visits, w: node.wins })
-    }
+    if (key >= 0) storeInTable(key, node)
 
     iterations++
   }
 
-  let bestChild: MCTSNode | null = null
-  for (const child of root.children) {
-    if (
-      bestChild === null ||
-      child.visits > bestChild.visits ||
-      (child.visits === bestChild.visits && child.wins > bestChild.wins)
-    ) {
-      bestChild = child
-    }
-  }
-  return bestChild === null ? -1 : bestChild.moveIdx
+  return pickBestChild(root)
 }
 
 function playerToCode(player: Player): 1 | 2 {

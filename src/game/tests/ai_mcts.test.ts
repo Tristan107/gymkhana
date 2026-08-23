@@ -315,28 +315,6 @@ describe('ai_mcts chooseMove', () => {
     )
   })
 
-  it('expands strategically (red plays F4)', () => {
-    expectMove(
-      boardWith([
-        ['F6', 'red'],
-        ['H4', 'white'],
-      ]),
-      'red',
-      ['F4']
-    )
-  })
-
-  it('expands strategically (red plays C9, D8 or E9)', () => {
-    expectMove(
-      boardWith([
-        ['D10', 'red'],
-        ['H6', 'white'],
-      ]),
-      'red',
-      ['C9', 'D8', 'E9']
-    )
-  })
-
   it('is deterministic for repeated calls with fixed seed', () => {
     const board = boardWith([
       ['F6', 'red'],

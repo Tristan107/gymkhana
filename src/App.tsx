@@ -8,10 +8,8 @@ import RulesScreen from './components/RulesScreen'
 import { boardToText, parseBoardText } from './game/boardFile'
 import type { ParseResult } from './game/boardFile'
 import { gameReducer, initialState } from './game/reducer'
-import { chooseMove, setMCTSDifficulty } from './game/ai_mcts'
+import { requestAiMove, cancelPendingAiMoves } from './game/aiWorkerClient'
 import { OPPONENT } from './constants'
-
-setMCTSDifficulty('hard')
 import { getPlayerId, getRoomCodeFromUrl, clearRoomCodeFromUrl } from './firebase/id'
 import type { Player } from './types'
 
@@ -45,18 +43,24 @@ function App() {
 
   useEffect(() => {
     if (!isAiTurn || state.humanPlayer === null) return
+    let cancelled = false
     const aiPlayer = OPPONENT[state.humanPlayer]
     const timeout = setTimeout(() => {
       const currentState = stateRef.current
-      const move = chooseMove(
+      void requestAiMove(
         currentState.board,
         aiPlayer,
         currentState.tilesPlaced,
         currentState.gameOver
-      )
-      if (move) dispatch({ type: 'PLACE', row: move.row, col: move.col })
+      ).then((move) => {
+        if (!cancelled && move) dispatch({ type: 'PLACE', row: move.row, col: move.col })
+      })
     }, 400)
-    return () => clearTimeout(timeout)
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      cancelPendingAiMoves()
+    }
   }, [isAiTurn, state.humanPlayer])
 
   const handleOnlineGameReady = useCallback((code: string, myColor: Player) => {

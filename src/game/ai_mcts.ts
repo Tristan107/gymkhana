@@ -219,24 +219,6 @@ function countVulnerableChains(board: Uint8Array, defender: 1 | 2, attacker: 1 |
   return count
 }
 
-function collectChainsFew(
-  board: Uint8Array,
-  defender: 1 | 2,
-  attacker: 1 | 2,
-  maxCount: number,
-  out: number[][]
-): number {
-  const n = scanComponents(board, defender)
-  let count = 0
-  for (let i = 0; i < n; i++) {
-    const info = chainInfo(board, COMPS[i], defender, attacker)
-    if (info.playable <= maxCount && info.boxable) {
-      copyComp(COMPS[i], out[count])
-      count++
-    }
-  }
-  return count
-}
 
 function findForcedWinMove(board: Uint8Array, player: 1 | 2): number {
   const opponent = other(player)
@@ -497,54 +479,8 @@ function collectThreatened(board: Uint8Array, defender: 1 | 2, attacker: 1 | 2):
   return count
 }
 
-function findSingleLibertyDefense(board: Uint8Array, player: 1 | 2): number {
-  const n = scanComponents(board, player)
-  for (let i = 0; i < n; i++) {
-    const nLibs = componentLiberties(board, COMPS[i], player)
-    if (nLibs !== 1) continue
-    const liberty = LIBS[0]
-    if (LEGAL.includes(liberty)) return liberty
-  }
-  return -1
-}
 
-function findComponentContaining(
-  board: Uint8Array,
-  player: 1 | 2,
-  cell: number
-): number[] | null {
-  const n = scanComponents(board, player)
-  for (let i = 0; i < n; i++) {
-    if (COMPS[i].includes(cell)) return COMPS[i]
-  }
-  return null
-}
 
-function findBestLibertyDefense(board: Uint8Array, player: 1 | 2): number {
-  const attacker = other(player)
-  const nSelected = collectChainsFew(board, player, attacker, 2, SNAP)
-  let bestMove = -1
-  let bestScore = -1
-  for (let i = 0; i < nSelected; i++) {
-    const comp = SNAP[i]
-    const nLibs = componentLiberties(board, comp, player)
-    for (let j = 0; j < nLibs; j++) {
-      const liberty = LIBS[j]
-      if (!LEGAL.includes(liberty)) continue
-      applyMove(board, liberty, player)
-      const merged = findComponentContaining(board, player, liberty)
-      if (merged !== null) {
-        const score = componentLiberties(board, merged, player)
-        if (score > bestScore) {
-          bestScore = score
-          bestMove = liberty
-        }
-      }
-      undoMove(board, liberty)
-    }
-  }
-  return bestMove
-}
 
 function edgeWeight(board: Uint8Array, color: 1 | 2, idx: number): number {
   const cell = board[idx]
@@ -1139,15 +1075,10 @@ export function chooseMove(
   const oppForkGeneral = findForkBlockMode(EVAL_BOARD, LEGAL, pCode, 'general')
   if (oppForkGeneral >= 0) return idxToMove(oppForkGeneral)
 
-  const singleDefense = findSingleLibertyDefense(EVAL_BOARD, pCode)
-  if (singleDefense >= 0) return idxToMove(singleDefense)
-
-  const bestDefense = findBestLibertyDefense(EVAL_BOARD, pCode)
-  if (bestDefense >= 0) return idxToMove(bestDefense)
-
-  // Step 10: Hybrid MCTS (replaces Strategic Path Expansion)
+  // MCTS handles everything else (liberty defense + strategic expansion)
   const mctsMove = runMCTS(EVAL_BOARD, pCode, tilesPlaced.red, tilesPlaced.white)
   if (mctsMove >= 0) return idxToMove(mctsMove)
 
+  console.warn('[AI] MCTS failed to select move (unexpected), falling back to pickBestStrategic')
   return idxToMove(pickBestStrategic(EVAL_BOARD, pCode))
 }

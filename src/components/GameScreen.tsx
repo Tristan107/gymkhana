@@ -48,6 +48,8 @@ function GameScreen({
   interactive = true,
   showCoordinates = false,
 }: Readonly<GameScreenProps>) {
+  const isInteractive =
+    gameMode !== 'ai' || humanPlayer === null || humanPlayer === currentPlayer
   return (
     <main data-testid="game-screen" className="flex min-h-screen flex-col items-center p-5 box-border">
       <Header />
@@ -66,7 +68,7 @@ function GameScreen({
               lastMove={lastMove}
               gameOver={gameOver}
               tilesPlaced={tilesPlaced}
-              interactive={interactive}
+              interactive={interactive && isInteractive}
               showCoordinates={showCoordinates}
               onCellClick={onCellClick}
             />
